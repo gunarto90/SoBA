@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.spatial import distance
 
-ACTIVE_PROJECT = 0  # 0 Gowalla dataset, 1 Brightkite dataset
+ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
-topk = 500
+topk = 100
 HOURDAY = 24
 HOURWEEK = 24 * 7
 
@@ -65,6 +65,7 @@ def init_checkins(file=None):
     counter = 0
     error = 0
     query_time = time.time()
+    count_weekend = 0
     with open(file, 'r') as fcheck:
         for line in fcheck:
             split = line.strip().split(',')
@@ -82,9 +83,15 @@ def init_checkins(file=None):
                 users[uid] = user
             user.add_checkin(vid, lat, lon, timestamp)
             counter += 1
+            # Counting weekend checkins
+            x = date.fromtimestamp(timestamp)
+            if x.weekday() >= 5:
+                count_weekend += 1
+                # write_to_file(working_folder + 'checkin_weekend.csv', line.strip())
     process_time = int(time.time() - query_time)
     print('Processing {0:,} checkins in {1} seconds'.format(counter, process_time))
     print('There are {} errors in checkin file'.format(error))
+    debug('Count weekend: {:,}'.format(count_weekend))
     # if IS_DEBUG:
     #     show_object_size(users, 'users')
     return users
@@ -115,7 +122,7 @@ def init_friendships(file=None):
 def init():
     make_sure_path_exists(working_folder)
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
-    # checkins_file = None
+    checkins_file = None
     users = init_checkins(checkins_file)
     friends = init_friendships()
     return users, friends
@@ -146,7 +153,8 @@ def select_top_k_friendship(uids, friends, topk):
     with open(working_folder + 'friend{}.csv'.format(topk), 'w') as fw:
         for uid in uids:
             for friend in friends[uid]:
-                fw.write('{},{}\n'.format(uid, friend))
+                if friend in uids:
+                    fw.write('{},{}\n'.format(uid, friend))
 
 def sort_user_checkins(users):
     uids = []
@@ -182,14 +190,14 @@ def sim_difference(arr1, arr2):
 def calculate_temporal_similarity(uid1, uid2, users_time_slots):
     u = users_time_slots[uid1]
     v = users_time_slots[uid2]
-    score = distance.euclidean(u, v)
+    # score = distance.euclidean(u, v)
     score = distance.cosine(u, v)
-    score = distance.correlation(u, v)
-    score = distance.cityblock(u, v)
-    score = distance.canberra(u, v)
-    score = distance.chebyshev(u, v)
-    score = distance.braycurtis(u, v)
-    score = distance.minkowski(u, v, 1)
+    # score = distance.correlation(u, v)
+    # score = distance.cityblock(u, v)
+    # score = distance.canberra(u, v)
+    # score = distance.chebyshev(u, v)
+    # score = distance.braycurtis(u, v)
+    # score = distance.minkowski(u, v, 1)
     return score
 
 # Main function
@@ -198,12 +206,15 @@ if __name__ == '__main__':
     ### Initialize dataset
     users, friends = init()
     # debug('Number of users : {:,}'.format(len(users)), 'MAIN')
+    
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
+    
     ### Sorting users' checkins based on their timestamp, ascending ordering
-    uids = sort_user_checkins(users)
+    # uids = sort_user_checkins(users)
+    ### Generate topk users' friendship
+    # select_top_k_friendship(uids, friends, topk)
 
-    select_top_k_friendship(uids, friends, topk)
     ### Iterate over users' checkins
     # users_time_slots = {}
     # for uid, user in users.items():
@@ -227,6 +238,8 @@ if __name__ == '__main__':
     ### Capture the score of true friend and not
     # friend_true = []
     # friend_false = []
+    # friend_threshold = {}
+    # threshold = 0.299
     # for i in range(0, len(uids)):
     #     for j in range(i+1, len(uids)):
     #         score = calculate_temporal_similarity(uids[i], uids[j], users_time_slots)
@@ -235,11 +248,27 @@ if __name__ == '__main__':
     #             friend_true.append(score)
     #         else:
     #             friend_false.append(score)
+    #         if score <= threshold:
+    #             ft = friend_threshold.get(uids[i])
+    #             if ft is None:
+    #                 ft = []
+    #                 friend_threshold[uids[i]] = ft
+    #             ft.append(uids[j])
 
     # df_true = pd.DataFrame(friend_true)
     # df_false = pd.DataFrame(friend_false)
 
     # debug(df_true.describe())
     # debug(df_false.describe())
+
+    # correct = 0
+    # counter = 0
+    # for uid, friend in friend_threshold.items():
+    #     for f in friend:
+    #         counter += 1
+    #         if f in friends[uid]:
+    #             correct += 1
+    # debug('Correct: {}'.format(correct))
+    # debug('All    : {}'.format(counter))
 
     print("--- Program finished ---")
