@@ -17,11 +17,21 @@ HOURDAY = 24
 HOURWEEK = 24 * 7
 
 class Venue:
-    def __init__(self, _id, _count, _lat, _lon):
+    def __init__(self, _id, _lat, _lon):
         self.id = _id               # Venue id
-        self.count = _count
         self.lat = _lat
         self.lon = _lon
+        self.count = 0
+        self.cluster = -1
+
+    def set_count(self, count):
+        self.count = count
+
+    def increase_count(self):
+        self.count += 1
+
+    def set_cluster(self, cluster_id):
+        self.cluster = cluster_id
 
 class Checkin:
     def __init__(self, _uid, _vid, _lat, _lon, _time):
@@ -119,13 +129,46 @@ def init_friendships(file=None):
     print('Processing {0:,} friendships in {1} seconds'.format(counter, process_time))
     return friends
 
+def init_venues(file=None):
+    if file is None:
+        file = base_folder + VENUE_FILE
+    venues = {}
+    counter = 0
+    error = 0
+    query_time = time.time()
+    with open(file, 'r') as fcheck:
+        for line in fcheck:
+            split = line.strip().split(',')
+            vid = int(split[0])
+            lat = float(split[1])
+            lon = float(split[2])
+            if lat == 0.0 or lon == 0.0 or lat > 180 or lon > 180 or lat <-180 or lat <-180:
+                error += 1
+                continue
+            v = venues.get(vid)
+            if v is None:
+                v = Venue(vid, lat, lon)
+                venues[vid] = v
+            else:
+                v.lat = (v.lat + lat) /2
+                v.lon = (v.lon + lon) /2
+                v.increase_count()
+            counter += 1
+    process_time = int(time.time() - query_time)
+    print('Processing {0:,} venues in {1} seconds'.format(counter, process_time))
+    print('There are {} errors in venue file'.format(error))
+    return venues
+
 def init():
     make_sure_path_exists(working_folder)
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
-    checkins_file = None
+    venue_file = working_folder + VENUE_FILE
+    # checkins_file = None
+    venue_file = None
     users = init_checkins(checkins_file)
     friends = init_friendships()
-    return users, friends
+    venues = init_venues(venue_file)
+    return users, friends, venues
 
 def write_user_checkins_recap(users):
     with open(working_folder + 'user_checkins.csv', 'a') as fw:
@@ -204,11 +247,17 @@ def calculate_temporal_similarity(uid1, uid2, users_time_slots):
 if __name__ == '__main__':
     print("--- Program  started ---")
     ### Initialize dataset
-    users, friends = init()
+    users, friends, venues = init()
     # debug('Number of users : {:,}'.format(len(users)), 'MAIN')
     
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
+
+    ### Normalizing venues
+    list_venue = []
+    for vid, venue in venues.items():
+        list_venue.append('{},{},{}'.format(vid, venue.lat, venue.lon))
+    write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
     # uids = sort_user_checkins(users)
