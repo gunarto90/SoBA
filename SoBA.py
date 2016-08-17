@@ -16,7 +16,7 @@ import hdbscan  # https://github.com/lmcinnes/hdbscan
 import seaborn as sns
 
 
-ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
+ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
 topk = 100
 HOURDAY = 24
@@ -74,7 +74,7 @@ def debug(message, callerid=None):
         print('[DEBUG] <Caller: {1}> {0}'.format(message, callerid))
 
 # Initializiation functions
-def init_checkins(file=None):
+def init_checkins(venues, file=None):
     if file is None:
         file = base_folder + CHECKIN_FILE
     users = {}
@@ -97,6 +97,9 @@ def init_checkins(file=None):
             if user is None:
                 user = User(uid)
                 users[uid] = user
+                venue = venues.get(vid)
+                if venue is not None:
+                    venue.increase_count()
             user.add_checkin(vid, lat, lon, timestamp)
             counter += 1
             # Counting weekend checkins
@@ -158,7 +161,6 @@ def init_venues(file=None):
             else:
                 v.lat = (v.lat + lat) /2
                 v.lon = (v.lon + lon) /2
-                v.increase_count()
             counter += 1
     process_time = int(time.time() - query_time)
     print('Processing {0:,} venues in {1} seconds'.format(counter, process_time))
@@ -169,11 +171,11 @@ def init():
     make_sure_path_exists(working_folder)
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
     venue_file = working_folder + VENUE_FILE
-    # checkins_file = None
+    checkins_file = None
     # venue_file = None
-    users = init_checkins(checkins_file)
-    friends = init_friendships()
     venues = init_venues(venue_file)
+    users = init_checkins(venues, checkins_file)
+    friends = init_friendships()
     return users, friends, venues
 
 def write_user_checkins_recap(users):
@@ -337,25 +339,29 @@ if __name__ == '__main__':
     # select_top_k_users_checkins(users, topk)
 
     ### Normalizing venues
-    # list_venue = []
-    # for vid, venue in venues.items():
+    list_venue = []
+    count = 0
+    for vid, venue in venues.items():
+        if venue.count > count:
+            count = venue.count
+    debug(count)
     #     list_venue.append('{},{},{}'.format(vid, venue.lat, venue.lon))
     # debug(len(list_venue))
     # write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
 
     ### Clustering venues
-    list_venue = []
-    for vid, venue in venues.items():
-        temp = []
-        # temp.append(vid)
-        temp.append(venue.lat)
-        temp.append(venue.lon)
-        list_venue.append(temp)
-        if len(list_venue) >= 100000:
-            break
-    X = np.array(list_venue)
-    # clustering_venues(X)
-    cluster_labels = hdcluster(X)
+    # list_venue = []
+    # for vid, venue in venues.items():
+    #     temp = []
+    #     # temp.append(vid)
+    #     temp.append(venue.lat)
+    #     temp.append(venue.lon)
+    #     list_venue.append(temp)
+    #     if len(list_venue) >= 100000:
+    #         break
+    # X = np.array(list_venue)
+    # # clustering_venues(X)
+    # cluster_labels = hdcluster(X)
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
     # uids = sort_user_checkins(users)
