@@ -10,7 +10,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.spatial import distance
 
-ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
+from sklearn.cluster import DBSCAN
+from sklearn import metrics
+import hdbscan  # https://github.com/lmcinnes/hdbscan
+import seaborn as sns
+
+
+ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
 topk = 100
 HOURDAY = 24
@@ -164,7 +170,7 @@ def init():
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
     venue_file = working_folder + VENUE_FILE
     # checkins_file = None
-    venue_file = None
+    # venue_file = None
     users = init_checkins(checkins_file)
     friends = init_friendships()
     venues = init_venues(venue_file)
@@ -243,6 +249,83 @@ def calculate_temporal_similarity(uid1, uid2, users_time_slots):
     # score = distance.minkowski(u, v, 1)
     return score
 
+def clustering_venues(X):
+    debug("Running clustering")
+    query_time = time.time()
+    EPS = 0.3
+    MIN_SAMPLES = 10
+    db = DBSCAN(eps=EPS, min_samples=MIN_SAMPLES).fit(X)
+    process_time = int(time.time() - query_time)
+    debug('Finished clustering {0:,} venues in {1} seconds'.format(len(X), process_time))
+
+    core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    core_samples_mask[db.core_sample_indices_] = True
+    labels = db.labels_
+    # debug(labels)
+
+    count_outlier = 0
+    for x in labels:
+        if x == -1:
+            count_outlier += 1
+    debug('#Labels: {}'.format(len(labels)))
+    debug('#Outlier : {}'.format(count_outlier))
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+
+    debug('Number of clusters: {}'.format(n_clusters_))
+
+    ### Plot clusters
+    # import matplotlib.pyplot as plt
+    # # Black removed and is used for noise instead.
+    # unique_labels = set(labels)
+    # colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
+    # for k, col in zip(unique_labels, colors):
+    #     if k == -1:
+    #         # Black used for noise.
+    #         col = 'k'
+
+    #     class_member_mask = (labels == k)
+
+    #     ### Clustered results
+    #     xy = X[class_member_mask & core_samples_mask]
+    #     plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
+    #              markeredgecolor='k', markersize=14)
+
+    #     ### Outlier ?
+    #     # xy = X[class_member_mask & ~core_samples_mask]
+    #     # plt.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col,
+    #     #          markeredgecolor='k', markersize=6)
+
+    # plt.title('Estimated number of clusters: %d' % n_clusters_)
+    # plt.show()
+
+def hdcluster(X):
+    debug("Running clustering")
+    query_time = time.time()
+    MIN_CLUSTER_SIZE = 10
+    MIN_SAMPLES = 3
+    db = hdbscan.HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, min_samples=MIN_SAMPLES).fit(X)
+
+    labels = db.labels_
+    # labels = db.fit_predict(X)
+    process_time = int(time.time() - query_time)
+    debug('Finished clustering {0:,} venues in {1} seconds'.format(len(X), process_time))
+
+    count_outlier = 0
+    for x in labels:
+        if x == -1:
+            count_outlier += 1
+    debug('#Labels: {}'.format(len(labels)))
+    debug('#Outlier : {}'.format(count_outlier))
+
+    # Number of clusters in labels, ignoring noise if present.
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+
+    debug('Number of clusters: {}'.format(n_clusters_))
+
+    return labels
+
 # Main function
 if __name__ == '__main__':
     print("--- Program  started ---")
@@ -254,10 +337,25 @@ if __name__ == '__main__':
     # select_top_k_users_checkins(users, topk)
 
     ### Normalizing venues
+    # list_venue = []
+    # for vid, venue in venues.items():
+    #     list_venue.append('{},{},{}'.format(vid, venue.lat, venue.lon))
+    # debug(len(list_venue))
+    # write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
+
+    ### Clustering venues
     list_venue = []
     for vid, venue in venues.items():
-        list_venue.append('{},{},{}'.format(vid, venue.lat, venue.lon))
-    write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
+        temp = []
+        # temp.append(vid)
+        temp.append(venue.lat)
+        temp.append(venue.lon)
+        list_venue.append(temp)
+        if len(list_venue) >= 100000:
+            break
+    X = np.array(list_venue)
+    # clustering_venues(X)
+    cluster_labels = hdcluster(X)
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
     # uids = sort_user_checkins(users)
