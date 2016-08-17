@@ -11,13 +11,16 @@ def make_sure_path_exists(path):
     except OSError as exception:
         pass
 
-def write_to_file(filename, text, append=True):
+def write_to_file(filename, text, append=True, add_linefeed=True):
     if append:
         mode = 'a'
     else:
         mode = 'w'
+    linefeed = ''
+    if add_linefeed is True:
+        linefeed = '\n'
     with open(filename, mode) as fw:
-        fw.write(str(text) + '\n')
+        fw.write(str(text) + linefeed)
     pass
 
 def write_to_file_buffered(filename, text_list, append=True):
@@ -25,13 +28,13 @@ def write_to_file_buffered(filename, text_list, append=True):
     counter = 0
     temp_str = ""
     for text in text_list:
-        if counter < buffer_size:
+        if counter <= buffer_size:
             temp_str = temp_str + text + '\n'
         else:
-            write_to_file(filename, temp_str, append)
+            write_to_file(filename, temp_str, append, add_linefeed=False)
             temp_str = ""
             counter = 0
         counter += 1
     # Write remaining text
     if temp_str != "":
-        write_to_file(filename, temp_str, append)
+        write_to_file(filename, temp_str, append, add_linefeed=False)
