@@ -1,6 +1,8 @@
 import os
 from pympler import asizeof
 
+IS_DEBUG = True
+
 def show_object_size(obj, name):
     size = asizeof.asizeof(obj)
     print('Size of {0} is : {1:,} Bytes'.format(name, size))
@@ -38,3 +40,11 @@ def write_to_file_buffered(filename, text_list, append=True):
     # Write remaining text
     if temp_str != "":
         write_to_file(filename, temp_str, append, add_linefeed=False)
+
+def debug(message, callerid=None):
+    if IS_DEBUG == False:
+        return
+    if callerid is None:
+        print('[DEBUG] {0}'.format(message))
+    else :
+        print('[DEBUG] <Caller: {1}> {0}'.format(message, callerid))
