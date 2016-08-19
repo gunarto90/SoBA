@@ -16,7 +16,7 @@ import hdbscan  # https://github.com/lmcinnes/hdbscan
 import seaborn as sns
 
 
-ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
+ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
 topk = 100
 HOURDAY = 24
@@ -57,9 +57,14 @@ class User:
     def __init__(self, _id):
         self.id = _id               # User id
         self.checkins = []
+        self.friends = []
 
     def add_checkin(self, _vid, _lat, _lon, _time):
         self.checkins.append(Checkin(self.id, _vid, _lat, _lon, _time))
+
+    def add_friends(self, friend_list):
+        for fid in friend_list:
+            self.friends.append(fid)
 
     def __str__(self):
         return '{},{}'.format(self.id, len(self.checkins))
@@ -72,9 +77,12 @@ weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
 CHECKIN_FILE = 'checkin.csv'
 FRIEND_FILE = 'friend.csv'
 USER_FILE = 'user.csv'
-VENUE_FILE = 'venue_location.csv'
+VENUE_FILE = 'venue.csv'
 
-CHECKIN_WEEKEND = working_folder + 'checkins_weekend.csv'
+CHECKIN_WEEKEND = weekend_folder + CHECKIN_FILE
+FRIEND_WEEKEND = weekend_folder + FRIEND_FILE
+USER_WEEKEND = weekend_folder + USER_FILE
+VENUE_WEEKEND = weekend_folder + VENUE_FILE
 
 # Utility functions
 def debug(message, callerid=None):
@@ -121,7 +129,7 @@ def init_checkins(venues, file=None):
                 # write_to_file(working_folder + 'checkin_weekend.csv', line.strip())
     process_time = int(time.time() - query_time)
     print('Processing {0:,} checkins in {1} seconds'.format(counter, process_time))
-    print('There are {} errors in checkin file'.format(error))
+    debug('There are {} errors in checkin file'.format(error))
     debug('Count weekend: {:,}'.format(count_weekend))
     # if IS_DEBUG:
     #     show_object_size(users, 'users')
@@ -177,7 +185,7 @@ def init_venues(file=None):
             counter += 1
     process_time = int(time.time() - query_time)
     print('Processing {0:,} venues in {1} seconds'.format(counter, process_time))
-    print('There are {} errors in venue file'.format(error))
+    debug('There are {} errors in venue file'.format(error))
     return venues
 
 def init():
@@ -188,6 +196,10 @@ def init():
     checkins_file = CHECKIN_WEEKEND
     ### Extracted venue
     venue_file = working_folder + VENUE_FILE
+    ### Venue weekend
+    venue_file = VENUE_WEEKEND
+    ### Friendship weekend
+    friend_file = FRIEND_WEEKEND
 
     ### Original files
     # checkins_file = None
@@ -196,7 +208,7 @@ def init():
     ### Run initialization
     venues = init_venues(venue_file)
     users = init_checkins(venues, checkins_file)
-    friends = init_friendships(users)
+    friends = init_friendships(users, friend_file)
     return users, friends, venues
 
 def write_user_checkins_recap(users):
@@ -360,35 +372,34 @@ if __name__ == '__main__':
     # select_top_k_users_checkins(users, topk)
 
     ### Process venue, user, and friendship in weekend data
-    list_venue = []
-    count = 0
-    texts = []
-    for vid, venue in venues.items():
-        if venue.count > 0:
-            count += 1
-            # texts.append(str(venue))
-    # write_to_file_buffered(working_folder + 'venue_weekend.csv', texts)
-    debug(count)
-    debug(len(venues))
+    # list_venue = []
+    # count = 0
+    # texts = []
+    # for vid, venue in venues.items():
+    #     if venue.count > 0:
+    #         count += 1
+    #         # texts.append(str(venue))
+    # # write_to_file_buffered(working_folder + 'venue_weekend.csv', texts)
+    # debug(count)
+    # debug(len(venues))
 
-    count = 0
-    texts = []
-    for uid, user in users.items():
-        if len(user.checkins) > 0:
-            count += 1
-    #         texts.append(str(user))
-    # write_to_file_buffered(working_folder + 'user_weekend.csv', texts)
-    debug(count)
-    debug(len(users))
-
-    count = 0
-    texts = []
-    for uid, f_list in friends.items():
-        for fid in f_list:
-            count += 1
-    #         texts.append('{},{}'.format(uid, fid))
-    # write_to_file_buffered(working_folder + 'friend_weekend.csv', texts)
-    debug(count)
+    # count = 0
+    # texts = []
+    # texts_f = []
+    # count_f = 0
+    # for uid, user in users.items():
+    #     if len(user.checkins) > 0:
+    #         count += 1
+    # #         texts.append(str(user))
+    #     if len(user.friends) > 0:
+    #         for fid in f_list:
+    #             count_f += 1
+    #             # texts_f.append('{},{}'.format(uid, fid))
+    # # write_to_file_buffered(working_folder + 'user_weekend.csv', texts)
+    # # write_to_file_buffered(working_folder + 'friend_weekend.csv', texts_f)
+    # debug(count)
+    # debug(len(users))
+    # debug(count_f)
 
     ### Normalizing venues
     # list_venue = []
