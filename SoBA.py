@@ -16,7 +16,7 @@ import hdbscan  # https://github.com/lmcinnes/hdbscan
 import seaborn as sns
 
 
-ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
+ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
 topk = 100
 HOURDAY = 24
@@ -67,6 +67,7 @@ class User:
 dataset = ["gowalla", "brightkite"]
 base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
 working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
+weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
 
 CHECKIN_FILE = 'checkin.csv'
 FRIEND_FILE = 'friend.csv'
@@ -126,7 +127,7 @@ def init_checkins(venues, file=None):
     #     show_object_size(users, 'users')
     return users
 
-def init_friendships(file=None):
+def init_friendships(users, file=None):
     if file is None:
         file = base_folder + FRIEND_FILE
     friends = {}
@@ -139,11 +140,12 @@ def init_friendships(file=None):
                 continue
             uid = int(split[0])
             fid = int(split[1])
-            friend = friends.get(uid)
-            if friend is None:
-                friend = []
-                friends[uid] = friend
-            friend.append(fid)
+            if uid in users and fid in users:
+                friend = friends.get(uid)
+                if friend is None:
+                    friend = []
+                    friends[uid] = friend
+                friend.append(fid)
             counter += 1
     process_time = int(time.time() - query_time)
     print('Processing {0:,} friendships in {1} seconds'.format(counter, process_time))
@@ -194,7 +196,7 @@ def init():
     ### Run initialization
     venues = init_venues(venue_file)
     users = init_checkins(venues, checkins_file)
-    friends = init_friendships()
+    friends = init_friendships(users)
     return users, friends, venues
 
 def write_user_checkins_recap(users):
@@ -357,25 +359,36 @@ if __name__ == '__main__':
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
 
-    ### Process venue and user weekend data
+    ### Process venue, user, and friendship in weekend data
     list_venue = []
     count = 0
+    texts = []
     for vid, venue in venues.items():
         if venue.count > 0:
             count += 1
-            # with open(working_folder + 'venue_weekend.csv', 'a') as fw:
-            #     fw.write(str(venue) + '\n')
+            # texts.append(str(venue))
+    # write_to_file_buffered(working_folder + 'venue_weekend.csv', texts)
     debug(count)
     debug(len(venues))
 
     count = 0
+    texts = []
     for uid, user in users.items():
         if len(user.checkins) > 0:
             count += 1
-            # with open(working_folder + 'user_weekend.csv', 'a') as fw:
-            #     fw.write(str(user) + '\n')
+    #         texts.append(str(user))
+    # write_to_file_buffered(working_folder + 'user_weekend.csv', texts)
     debug(count)
     debug(len(users))
+
+    count = 0
+    texts = []
+    for uid, f_list in friends.items():
+        for fid in f_list:
+            count += 1
+    #         texts.append('{},{}'.format(uid, fid))
+    # write_to_file_buffered(working_folder + 'friend_weekend.csv', texts)
+    debug(count)
 
     ### Normalizing venues
     # list_venue = []
