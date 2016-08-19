@@ -3,7 +3,10 @@
 #############################################
 
 user.csv
-uid, row_uid, checkins, row_checkins, friends, row_friends
+uid, row_uid, #checkins, row_checkins, #friends, row_friends
+
+user_weekend.csv
+uid, #checkins
 
 friend.csv
 user_1, user_2
@@ -11,7 +14,7 @@ user_1, user_2
 checkin.csv
 user_id, timestamp, latitude, longitude, venue_id
 
-venue_location.csv
+venue.csv
 vid, latitude, longitude
 
 #############################################
@@ -33,6 +36,10 @@ Brightkite	: 50,686 (58,228 in dataset)
 @#Active Users (#Checkins > 100)
 Gowalla		: 14,796
 Brightkite	: 8,173
+
+@#Friendship
+Gowalla		: 1,900,640	(Only 913,532 ties among who have checkins)
+Brightkite	: 428,156	(Only 388,180 ties among who have checkins)
 
 @Diversity data (maximum unique visitor in a venue)
 
@@ -58,3 +65,7 @@ Brightkite	: 35,390
 @#Active Users (#Checkins > 100)
 Gowalla		: 3,237
 Brightkite	: 3,153
+
+@#Friendship
+Gowalla		: 804,957
+Brightkite	: 305,670
