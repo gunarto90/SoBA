@@ -66,6 +66,17 @@ class User:
         for fid in friend_list:
             self.friends.append(fid)
 
+    def add_distribution(self, venues, n_clusters):
+        self.dist = []
+        for i in range(0, n_clusters):
+            self.dist.append(0)
+        for c in self.checkins:
+            vid = c.vid
+            venue = venues.get(vid)
+            if venue is None or venue.cluster == -1:
+                continue
+            self.dist[venue.cluster] += 1
+
     def __str__(self):
         return '{},{}'.format(self.id, len(self.checkins))
 
@@ -83,6 +94,8 @@ CHECKIN_WEEKEND = weekend_folder + CHECKIN_FILE
 FRIEND_WEEKEND = weekend_folder + FRIEND_FILE
 USER_WEEKEND = weekend_folder + USER_FILE
 VENUE_WEEKEND = weekend_folder + VENUE_FILE
+USER_DIST_WEEKEND = weekend_folder + 'user_dist.csv'
+VENUE_CLUSTER_WEEKEND = weekend_folder + 'venue_cluster.csv'
 
 # Utility functions
 def debug(message, callerid=None):
@@ -284,7 +297,7 @@ def calculate_temporal_similarity(uid1, uid2, users_time_slots):
     # score = distance.minkowski(u, v, 1)
     return score
 
-def clustering_venues(X):
+def dbscan(X):
     debug("Running clustering")
     query_time = time.time()
     EPS = 0.3
@@ -310,7 +323,7 @@ def clustering_venues(X):
 
     debug('Number of clusters: {}'.format(n_clusters_))
 
-    ### Plot clusters
+    # ### Plot clusters
     # import matplotlib.pyplot as plt
     # # Black removed and is used for noise instead.
     # unique_labels = set(labels)
@@ -334,6 +347,8 @@ def clustering_venues(X):
 
     # plt.title('Estimated number of clusters: %d' % n_clusters_)
     # plt.show()
+
+    return labels, n_clusters_
 
 def hdcluster(X):
     debug("Running clustering")
@@ -359,7 +374,49 @@ def hdcluster(X):
 
     debug('Number of clusters: {}'.format(n_clusters_))
 
-    return labels
+    return labels, n_clusters_
+
+def clustering(venues, users, outputToFile=False):
+    ### Clustering venues
+    list_venue = []
+    for vid, venue in venues.items():
+        temp = []
+        temp.append(venue.lat)
+        temp.append(venue.lon)
+        list_venue.append(temp)
+        # if len(list_venue) >= 100000:
+        #     break
+    X = np.array(list_venue)
+    cluster_labels, n_clusters = dbscan(X)
+    # cluster_labels = hdcluster(X)
+
+    ### Note: Cluster labels are from -1 (outlier) to the highest cluster id
+
+    ### Set cluster ID
+    if outputToFile is True:
+        texts = []
+    count = 0
+    for vid, venue in venues.items():
+        venue.set_cluster(cluster_labels[count])
+        if outputToFile is True:
+            texts.append('{},{}'.format(vid, cluster_labels[count]))
+        count += 1
+    if outputToFile is True:
+        write_to_file_buffered(working_folder + 'venue_weekend_cluster.csv', texts)
+
+    ### Count how the distribution of user's checkins among cluster
+    query_time = time.time()
+    for uid, user in users.items():
+        user.add_distribution(venues, n_clusters)
+    process_time = int(time.time() - query_time)
+    debug('Finished adding users checkins distribution {} seconds'.format(process_time))
+
+    ### Writing the result of user's checkin distribution
+    if outputToFile is True:
+        texts = []
+        for uid, user in users.items():
+            texts.append('{},{}'.format(uid, ','.join(str(x) for x in user.dist)))
+        write_to_file_buffered(working_folder + 'user_weekend_cluster_dist.csv', texts)
 
 # Main function
 if __name__ == '__main__':
@@ -407,19 +464,8 @@ if __name__ == '__main__':
     # debug(len(list_venue))
     # write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
 
-    ### Clustering venues
-    # list_venue = []
-    # for vid, venue in venues.items():
-    #     temp = []
-    #     # temp.append(vid)
-    #     temp.append(venue.lat)
-    #     temp.append(venue.lon)
-    #     list_venue.append(temp)
-    #     if len(list_venue) >= 100000:
-    #         break
-    # X = np.array(list_venue)
-    # # clustering_venues(X)
-    # cluster_labels = hdcluster(X)
+    ### Perform clustering on venues
+    clustering(venues, users, outputToFile=False)
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
     # uids = sort_user_checkins(users)
