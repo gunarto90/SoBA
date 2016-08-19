@@ -17,7 +17,6 @@ import seaborn as sns
 
 
 ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
-IS_DEBUG = True
 topk = 100
 HOURDAY = 24
 HOURWEEK = 24 * 7
@@ -96,15 +95,6 @@ USER_WEEKEND = weekend_folder + USER_FILE
 VENUE_WEEKEND = weekend_folder + VENUE_FILE
 USER_DIST_WEEKEND = weekend_folder + 'user_dist.csv'
 VENUE_CLUSTER_WEEKEND = weekend_folder + 'venue_cluster.csv'
-
-# Utility functions
-def debug(message, callerid=None):
-    if IS_DEBUG == False:
-        return
-    if callerid is None:
-        print('[DEBUG] {0}'.format(message))
-    else :
-        print('[DEBUG] <Caller: {1}> {0}'.format(message, callerid))
 
 # Initializiation functions
 def init_checkins(venues, file=None):
@@ -252,6 +242,36 @@ def select_top_k_friendship(uids, friends, topk):
             for friend in friends[uid]:
                 if friend in uids:
                     fw.write('{},{}\n'.format(uid, friend))
+
+def select_weekend_data(users, friends, venues):
+    list_venue = []
+    count = 0
+    texts = []
+    for vid, venue in venues.items():
+        if venue.count > 0:
+            count += 1
+            # texts.append(str(venue))
+    # write_to_file_buffered(working_folder + 'venue_weekend.csv', texts)
+    debug(count)
+    debug(len(venues))
+
+    count = 0
+    texts = []
+    texts_f = []
+    count_f = 0
+    for uid, user in users.items():
+        if len(user.checkins) > 0:
+            count += 1
+    #         texts.append(str(user))
+        if len(user.friends) > 0:
+            for fid in f_list:
+                count_f += 1
+                # texts_f.append('{},{}'.format(uid, fid))
+    # write_to_file_buffered(working_folder + 'user_weekend.csv', texts)
+    # write_to_file_buffered(working_folder + 'friend_weekend.csv', texts_f)
+    debug(count)
+    debug(len(users))
+    debug(count_f)
 
 def sort_user_checkins(users):
     uids = []
@@ -428,35 +448,8 @@ if __name__ == '__main__':
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
 
-    ### Process venue, user, and friendship in weekend data
-    # list_venue = []
-    # count = 0
-    # texts = []
-    # for vid, venue in venues.items():
-    #     if venue.count > 0:
-    #         count += 1
-    #         # texts.append(str(venue))
-    # # write_to_file_buffered(working_folder + 'venue_weekend.csv', texts)
-    # debug(count)
-    # debug(len(venues))
-
-    # count = 0
-    # texts = []
-    # texts_f = []
-    # count_f = 0
-    # for uid, user in users.items():
-    #     if len(user.checkins) > 0:
-    #         count += 1
-    # #         texts.append(str(user))
-    #     if len(user.friends) > 0:
-    #         for fid in f_list:
-    #             count_f += 1
-    #             # texts_f.append('{},{}'.format(uid, fid))
-    # # write_to_file_buffered(working_folder + 'user_weekend.csv', texts)
-    # # write_to_file_buffered(working_folder + 'friend_weekend.csv', texts_f)
-    # debug(count)
-    # debug(len(users))
-    # debug(count_f)
+    ### Process venue, user, and friendship in weekend data (Preprocessing)
+    # select_weekend_data(users, friends, venues)
 
     ### Normalizing venues
     # list_venue = []
@@ -465,7 +458,9 @@ if __name__ == '__main__':
     # write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
 
     ### Perform clustering on venues
-    clustering(venues, users, outputToFile=False)
+    # clustering(venues, users, outputToFile=False)
+
+    ### 
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
     # uids = sort_user_checkins(users)
