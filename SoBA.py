@@ -16,7 +16,7 @@ import hdbscan  # https://github.com/lmcinnes/hdbscan
 import seaborn as sns
 
 
-ACTIVE_PROJECT = 0 # 0 Gowalla dataset, 1 Brightkite dataset
+ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
 IS_DEBUG = True
 topk = 100
 HOURDAY = 24
@@ -39,6 +39,9 @@ class Venue:
     def set_cluster(self, cluster_id):
         self.cluster = cluster_id
 
+    def __str__(self):
+        return '{},{},{}'.format(self.id, self.lat, self.lon)
+
 class Checkin:
     def __init__(self, _uid, _vid, _lat, _lon, _time):
         self.uid = _uid
@@ -46,6 +49,9 @@ class Checkin:
         self.lat = _lat
         self.lon = _lon
         self.time = _time
+
+    def __str__(self):
+        return '{},{},{},{},{}'.format(self.uid, self.time, self.lat, self.lon, self.vid)
 
 class User:
     def __init__(self, _id):
@@ -55,14 +61,19 @@ class User:
     def add_checkin(self, _vid, _lat, _lon, _time):
         self.checkins.append(Checkin(self.id, _vid, _lat, _lon, _time))
 
+    def __str__(self):
+        return '{},{}'.format(self.id, len(self.checkins))
+
+dataset = ["gowalla", "brightkite"]
+base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
+working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
+
 CHECKIN_FILE = 'checkin.csv'
 FRIEND_FILE = 'friend.csv'
 USER_FILE = 'user.csv'
 VENUE_FILE = 'venue_location.csv'
 
-dataset = ["gowalla", "brightkite"]
-base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
-working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
+CHECKIN_WEEKEND = working_folder + 'checkins_weekend.csv'
 
 # Utility functions
 def debug(message, callerid=None):
@@ -169,10 +180,18 @@ def init_venues(file=None):
 
 def init():
     make_sure_path_exists(working_folder)
+    ### Top k users' checkins
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
+    ### Weekend checkins
+    checkins_file = CHECKIN_WEEKEND
+    ### Extracted venue
     venue_file = working_folder + VENUE_FILE
-    checkins_file = None
+
+    ### Original files
+    # checkins_file = None
     # venue_file = None
+
+    ### Run initialization
     venues = init_venues(venue_file)
     users = init_checkins(venues, checkins_file)
     friends = init_friendships()
@@ -338,13 +357,28 @@ if __name__ == '__main__':
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
 
-    ### Normalizing venues
+    ### Process venue and user weekend data
     list_venue = []
     count = 0
     for vid, venue in venues.items():
-        if venue.count > count:
-            count = venue.count
+        if venue.count > 0:
+            count += 1
+            # with open(working_folder + 'venue_weekend.csv', 'a') as fw:
+            #     fw.write(str(venue) + '\n')
     debug(count)
+    debug(len(venues))
+
+    count = 0
+    for uid, user in users.items():
+        if len(user.checkins) > 0:
+            count += 1
+            # with open(working_folder + 'user_weekend.csv', 'a') as fw:
+            #     fw.write(str(user) + '\n')
+    debug(count)
+    debug(len(users))
+
+    ### Normalizing venues
+    # list_venue = []
     #     list_venue.append('{},{},{}'.format(vid, venue.lat, venue.lon))
     # debug(len(list_venue))
     # write_to_file_buffered(working_folder + VENUE_FILE, list_venue)
