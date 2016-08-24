@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 24, 2016 at 07:52 AM
+-- Generation Time: Aug 24, 2016 at 08:23 AM
 -- Server version: 10.1.13-MariaDB
 -- PHP Version: 7.0.8
 
@@ -22,12 +22,14 @@ SET time_zone = "+00:00";
 -- Table structure for table `checkin`
 --
 
-CREATE TABLE if not exists `checkin`(
-  `uid` int(11) NOT NULL,
+CREATE TABLE IF NOT EXISTS `checkin` (
+  `user_id` int(11) NOT NULL,
   `timestamp` bigint(20) NOT NULL,
   `latitude` float NOT NULL,
   `longitude` float NOT NULL,
-  `vid` int(11) NOT NULL
+  `venue_id` int(11) NOT NULL,
+  KEY `uid` (`user_id`),
+  KEY `vid` (`venue_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -36,9 +38,10 @@ CREATE TABLE if not exists `checkin`(
 -- Table structure for table `friend`
 --
 
-CREATE TABLE if not exists `friend` (
-  `uid1` int(11) NOT NULL,
-  `uid2` int(11) NOT NULL
+CREATE TABLE IF NOT EXISTS `friend` (
+  `user_1` int(11) NOT NULL,
+  `user_2` int(11) NOT NULL,
+  PRIMARY KEY (`user_1`,`user_2`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -47,9 +50,10 @@ CREATE TABLE if not exists `friend` (
 -- Table structure for table `user`
 --
 
-CREATE TABLE if not exists `user` (
+CREATE TABLE IF NOT EXISTS `user` (
   `uid` int(11) NOT NULL,
-  `num_checkin` int(11) NOT NULL
+  `num_checkin` int(11) NOT NULL,
+  PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -58,10 +62,11 @@ CREATE TABLE if not exists `user` (
 -- Table structure for table `venue`
 --
 
-CREATE TABLE if not exists `venue` (
+CREATE TABLE IF NOT EXISTS `venue` (
   `vid` int(11) NOT NULL,
   `latitude` float NOT NULL,
-  `longitude` float NOT NULL
+  `longitude` float NOT NULL,
+  PRIMARY KEY (`vid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -70,46 +75,12 @@ CREATE TABLE if not exists `venue` (
 -- Table structure for table `venue_cluster`
 --
 
-CREATE TABLE if not exists `venue_cluster` (
+CREATE TABLE IF NOT EXISTS `venue_cluster` (
   `vid` int(11) NOT NULL,
-  `cluster` int(11) NOT NULL
+  `cluster` int(11) NOT NULL,
+  PRIMARY KEY (`vid`),
+  KEY `cluster` (`cluster`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `checkin`
---
-ALTER TABLE `checkin`
-  ADD KEY `uid` (`uid`),
-  ADD KEY `vid` (`vid`);
-
---
--- Indexes for table `friend`
---
-ALTER TABLE `friend`
-  ADD PRIMARY KEY (`uid1`,`uid2`);
-
---
--- Indexes for table `user`
---
-ALTER TABLE `user`
-  ADD PRIMARY KEY (`uid`);
-
---
--- Indexes for table `venue`
---
-ALTER TABLE `venue`
-  ADD PRIMARY KEY (`vid`);
-
---
--- Indexes for table `venue_cluster`
---
-ALTER TABLE `venue_cluster`
-  ADD PRIMARY KEY (`vid`),
-  ADD KEY `cluster` (`cluster`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
