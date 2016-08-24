@@ -8,6 +8,9 @@ uid, row_uid, #checkins, row_checkins, #friends, row_friends
 user_weekend.csv
 uid, #checkins
 
+user_dist.csv
+uid, #checkins in cluster #
+
 friend.csv
 user_1, user_2
 
