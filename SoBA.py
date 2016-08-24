@@ -57,6 +57,7 @@ class User:
         self.id = _id               # User id
         self.checkins = []
         self.friends = []
+        self.dist = []
 
     def add_checkin(self, _vid, _lat, _lon, _time):
         self.checkins.append(Checkin(self.id, _vid, _lat, _lon, _time))
@@ -275,9 +276,12 @@ def select_weekend_data(users, friends, venues):
 
 def sort_user_checkins(users):
     uids = []
+    query_time = time.time()
     for uid, user in users.items():
         user.checkins = sorted(user.checkins, key=lambda checkin: checkin.time, reverse=False)   # sort by checkin time
         uids.append(uid)
+    process_time = int(time.time() - query_time)
+    print('Sorting {0:,} users in {1} seconds'.format(len(users), process_time))
     return uids
 
 def normalize_array(data):
@@ -438,6 +442,56 @@ def clustering(venues, users, outputToFile=False):
             texts.append('{},{}'.format(uid, ','.join(str(x) for x in user.dist)))
         write_to_file_buffered(working_folder + 'user_weekend_cluster_dist.csv', texts)
 
+def user_cluster_similarity():
+    ### Open user cluster distribution file
+    users = {}
+    with open(USER_DIST_WEEKEND) as fr:
+        for line in fr:
+            split = line.split(',')
+            uid = int(split[0])
+            dist = []
+            for i in range(1, len(split)):
+                dist.append(int(split[i]))
+            users[uid] = dist
+
+    ### Calculate similarities between users
+    for uid1, dist1 in users.items():
+        del dist1[0]
+        for uid2, dist2 in users.items():
+            if uid1 == uid2:
+                continue
+            del dist2[0]
+            score = distance.cityblock(dist1, dist2)
+            print(sum(dist1))
+            print(sum(dist2))
+            print('{},{},{}'.format(uid1, uid2, score))
+            break
+        break
+
+def extract_temporal(users):
+    ### Iterate over users' checkins
+    users_time_slots = {}
+    query_time = time.time()
+    for uid, user in users.items():
+        ### Prepare empty timeslots
+        time_slots = []
+        for i in range(0, HOURDAY):
+            time_slots.append(0)
+        ### Measure the time distributions of each user's checkins
+        datetemp = None
+        for c in user.checkins:
+            x = datetime.fromtimestamp(c.time)
+            if datetemp is not None:
+                delta = x - datetemp
+            datetemp = x
+            time_slots[x.hour-1] += 1
+        normalize_array(time_slots)
+        users_time_slots[uid] = time_slots
+    process_time = int(time.time() - query_time)
+    print('Extracting temporal pattern of {0:,} users in {1} seconds'.format(len(users), process_time))
+    # plot_hourly(uids, users_time_slots)
+    return users_time_slots
+
 # Main function
 if __name__ == '__main__':
     print("--- Program  started ---")
@@ -459,68 +513,16 @@ if __name__ == '__main__':
 
     ### Perform clustering on venues
     # clustering(venues, users, outputToFile=False)
-
-    ### 
     
     ### Sorting users' checkins based on their timestamp, ascending ordering
-    # uids = sort_user_checkins(users)
+    uids = sort_user_checkins(users)
     ### Generate topk users' friendship
     # select_top_k_friendship(uids, friends, topk)
 
-    ### Iterate over users' checkins
-    # users_time_slots = {}
-    # for uid, user in users.items():
-    #     ### Prepare empty timeslots
-    #     time_slots = []
-    #     for i in range(0, HOURDAY):
-    #         time_slots.append(0)
-    #     ### Measure the time distributions of each user's checkins
-    #     datetemp = None
-    #     for c in user.checkins:
-    #         x = datetime.fromtimestamp(c.time)
-    #         if datetemp is not None:
-    #             delta = x - datetemp
-    #         datetemp = x
-    #         time_slots[x.hour-1] += 1
-    #     normalize_array(time_slots)
-    #     users_time_slots[uid] = time_slots
+    # user_cluster_similarity()
 
-    # plot_hourly(uids, users_time_slots)
-
+    users_time_slots = extract_temporal(users)
     ### Capture the score of true friend and not
-    # friend_true = []
-    # friend_false = []
-    # friend_threshold = {}
-    # threshold = 0.299
-    # for i in range(0, len(uids)):
-    #     for j in range(i+1, len(uids)):
-    #         score = calculate_temporal_similarity(uids[i], uids[j], users_time_slots)
-    #         # debug('Score for \t{}\t{}\t{}\t{}'.format(uids[i], uids[j], score, uids[j] in friends[uids[i]]))
-    #         if uids[j] in friends[uids[i]]:
-    #             friend_true.append(score)
-    #         else:
-    #             friend_false.append(score)
-    #         if score <= threshold:
-    #             ft = friend_threshold.get(uids[i])
-    #             if ft is None:
-    #                 ft = []
-    #                 friend_threshold[uids[i]] = ft
-    #             ft.append(uids[j])
-
-    # df_true = pd.DataFrame(friend_true)
-    # df_false = pd.DataFrame(friend_false)
-
-    # debug(df_true.describe())
-    # debug(df_false.describe())
-
-    # correct = 0
-    # counter = 0
-    # for uid, friend in friend_threshold.items():
-    #     for f in friend:
-    #         counter += 1
-    #         if f in friends[uid]:
-    #             correct += 1
-    # debug('Correct: {}'.format(correct))
-    # debug('All    : {}'.format(counter))
+    texts = []
 
     print("--- Program finished ---")
