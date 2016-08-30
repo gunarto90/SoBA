@@ -13,6 +13,12 @@ def make_sure_path_exists(path):
     except OSError as exception:
         pass
 
+def remove_file_if_exists(filename):
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
 def write_to_file(filename, text, append=True, add_linefeed=True):
     if append:
         mode = 'a'
