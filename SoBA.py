@@ -1,6 +1,8 @@
 import re
 import os
 import time
+import sys
+import getopt
 from general_utilities import *
 from datetime import date
 from datetime import datetime
@@ -15,17 +17,17 @@ from sklearn import metrics
 import hdbscan  # https://github.com/lmcinnes/hdbscan
 import seaborn as sns
 
-
-ACTIVE_PROJECT = 1 # 0 Gowalla dataset, 1 Brightkite dataset
-topk = 100
+PROJECT_NAME = ['Gowalla', 'Brightkite']
+ACTIVE_PROJECT = 0  # 0 Gowalla dataset, 1 Brightkite dataset
+topk = 50           # 0 weekend, -1 all
 HOURDAY = 24
 HOURWEEK = 24 * 7
 
 class Venue:
     def __init__(self, _id, _lat, _lon):
-        self.id = _id               # Venue id
+        self.vid = _id               # Venue id
         self.lat = _lat
-        self.lon = _lon
+        self.lon = _lon 
         self.count = 0
         self.cluster = -1
 
@@ -39,7 +41,7 @@ class Venue:
         self.cluster = cluster_id
 
     def __str__(self):
-        return '{},{},{}'.format(self.id, self.lat, self.lon)
+        return '{},{},{}'.format(self.vid, self.lat, self.lon)
 
 class Checkin:
     def __init__(self, _uid, _vid, _lat, _lon, _time):
@@ -54,13 +56,19 @@ class Checkin:
 
 class User:
     def __init__(self, _id):
-        self.id = _id               # User id
+        self.uid = _id              # User id
         self.checkins = []
         self.friends = []
         self.dist = []
+        self.earliest = sys.maxsize # Earliest checkin
+        self.latest = 0             # Latest checkin
 
     def add_checkin(self, _vid, _lat, _lon, _time):
-        self.checkins.append(Checkin(self.id, _vid, _lat, _lon, _time))
+        self.checkins.append(Checkin(self.uid, _vid, _lat, _lon, _time))
+        if _time < self.earliest:
+            self.earliest = _time
+        if _time > self.latest:
+            self.latest = _time
 
     def add_friends(self, friend_list):
         for fid in friend_list:
@@ -134,7 +142,7 @@ def init_checkins(venues, file=None):
     process_time = int(time.time() - query_time)
     print('Processing {0:,} checkins in {1} seconds'.format(counter, process_time))
     debug('There are {} errors in checkin file'.format(error))
-    debug('Count weekend: {:,}'.format(count_weekend))
+    # debug('Count weekend: {:,}'.format(count_weekend))
     # if IS_DEBUG:
     #     show_object_size(users, 'users')
     return users
@@ -197,17 +205,24 @@ def init():
     ### Top k users' checkins
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
     ### Weekend checkins
-    checkins_file = CHECKIN_WEEKEND
+    if topk == 0:
+        checkins_file = CHECKIN_WEEKEND
     ### Extracted venue
-    venue_file = working_folder + VENUE_FILE
+    venue_file = base_folder + VENUE_FILE
     ### Venue weekend
-    venue_file = VENUE_WEEKEND
+    if topk == 0:
+        venue_file = VENUE_WEEKEND
+    ### Friends
+    friend_file = working_folder + 'friend{}.csv'.format(topk)
     ### Friendship weekend
-    friend_file = FRIEND_WEEKEND
+    if topk == 0:
+        friend_file = FRIEND_WEEKEND
 
     ### Original files
-    # checkins_file = None
-    # venue_file = None
+    if topk == -1:
+        checkins_file = None
+        venue_file = None
+        friend_file = None
 
     ### Run initialization
     venues = init_venues(venue_file)
@@ -222,12 +237,12 @@ def write_user_checkins_recap(users):
 
 def select_top_k_users_checkins(users, topk):
     topk_users = {}
-    uids = []
     with open(working_folder + 'user_checkins.csv', 'r') as fr:
         count = 0
         for line in fr:
             split = line.split(',')
             uid = int(split[0])
+            topk_users[uid] = 1
             count += 1
             if count >= topk:
                 break
@@ -238,9 +253,23 @@ def select_top_k_users_checkins(users, topk):
                     fw.write('{},{},{},{},{}\n'.format(uid, checkin.time, checkin.lat, checkin.lon, checkin.vid))
 
 def select_top_k_friendship(uids, friends, topk):
+    topk_users = {}
+    with open(working_folder + 'user_checkins.csv', 'r') as fr:
+        count = 0
+        for line in fr:
+            split = line.split(',')
+            uid = int(split[0])
+            topk_users[uid] = 1
+            count += 1
+            if count >= topk:
+                break
     with open(working_folder + 'friend{}.csv'.format(topk), 'w') as fw:
-        for uid in uids:
-            for friend in friends[uid]:
+        for uid in topk_users:
+            u_friend = friends.get(uid)
+            if u_friend is None:
+                debug('Friends of uid {} are not found'.format(uid), 'select_top_k_friendship')
+                continue
+            for friend in u_friend:
                 if friend in uids:
                     fw.write('{},{}\n'.format(uid, friend))
 
@@ -492,12 +521,95 @@ def extract_temporal(users):
     # plot_hourly(uids, users_time_slots)
     return users_time_slots
 
+def write_co_location(co_location):
+    ### Write to file
+    texts = []
+    texts.append('uid1,uid2,vid,frequency')
+    for ss, frequency in co_location.items():
+        texts.append('{},{}'.format(ss, frequency))
+    filename = working_folder + 'co_location.csv'
+    remove_file_if_exists(filename)
+    write_to_file_buffered(filename, texts)
+
+def co_occur(users):
+    t_threshold = 3600  # 1 hour
+    query_time = time.time()
+    co_location = {}
+    all_user = []
+    for uid1, user in users.items():
+        all_user.append(user)
+    count = 0
+    i_start = 0
+    for i in range(i_start, len(all_user)):
+        user1 = all_user[i]
+        if i % 10 == 0:
+            print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
+        if i > 0 and i % 1000 == 0:
+            ### Save current progress
+            with open(working_folder + 'last_i.txt', 'w') as fi:
+                fi.write(str(i))
+            write_co_location(co_location)
+        for j in range(i+1, len(all_user)):
+            user2 = all_user[j]
+            if user1.uid == user2.uid:
+                continue
+            ### No overlapping checkins
+            if user1.earliest > user2.latest or user2.earliest > user1.latest:
+                continue
+            count += 1
+            # debug(i,j,len(user1.checkins),len(user2.checkins))
+            for c1 in user1.checkins:
+                for c2 in user2.checkins:
+                    if c1.vid != c2.vid:
+                        continue
+                    t_diff = abs(c1.time - c2.time)
+                    if t_diff > t_threshold:
+                        continue
+                    ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
+                    co = co_location.get(ss)
+                    if co is None:
+                        co = 0
+                    co += 1
+                    co_location[ss] = co
+    process_time = int(time.time() - query_time)
+    print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
+    write_co_location(co_location)
+
 # Main function
 if __name__ == '__main__':
     print("--- Program  started ---")
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:",["project=","topk="])
+    except getopt.GetoptError:
+        debug('SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users>', 'opt error')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            debug('SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users>', 'opt error')
+            sys.exit()
+        elif opt in ("-p", "--project"):
+            ACTIVE_PROJECT = int(arg)
+        elif opt in ("-k", "--topk"):
+            topk = int(arg)
+    debug('Selected project: {}'.format(PROJECT_NAME[ACTIVE_PROJECT]))
+    if topk > 0:
+        debug('Top {} users are selected'.format(topk))
+    elif topk == 0:
+        debug('Evaluating weekend checkins')
+    elif topk == -1:
+        debug('Evaluating all checkins')
+
+    ### Update folder based on Active project
+    base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
+    working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
+    weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
+    
     ### Initialize dataset
     users, friends, venues = init()
     # debug('Number of users : {:,}'.format(len(users)), 'MAIN')
+
+    ### Sorting users' checkins based on their timestamp, ascending ordering
+    uids = sort_user_checkins(users)
     
     ### Selecting topk users, for testing purpose
     # select_top_k_users_checkins(users, topk)
@@ -514,14 +626,15 @@ if __name__ == '__main__':
     ### Perform clustering on venues
     # clustering(venues, users, outputToFile=False)
     
-    ### Sorting users' checkins based on their timestamp, ascending ordering
-    uids = sort_user_checkins(users)
     ### Generate topk users' friendship
     # select_top_k_friendship(uids, friends, topk)
 
+    ### Co-location
+    co_occur(users)
+
     # user_cluster_similarity()
 
-    users_time_slots = extract_temporal(users)
+    # users_time_slots = extract_temporal(users)
     ### Capture the score of true friend and not
     texts = []
 
