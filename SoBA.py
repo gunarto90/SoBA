@@ -6,22 +6,25 @@ import getopt
 from general_utilities import *
 from datetime import date
 from datetime import datetime
+from math import radians, cos, sin, asin, sqrt
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.spatial import distance
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import pandas as pd
+# from scipy.spatial import distance
 
-from sklearn.cluster import DBSCAN
-from sklearn import metrics
-import hdbscan  # https://github.com/lmcinnes/hdbscan
-import seaborn as sns
+# from sklearn.cluster import DBSCAN
+# from sklearn import metrics
+# import hdbscan  # https://github.com/lmcinnes/hdbscan
+# import seaborn as sns
 
 PROJECT_NAME = ['Gowalla', 'Brightkite']
 ACTIVE_PROJECT = 0  # 0 Gowalla dataset, 1 Brightkite dataset
 topk = 50           # 0 weekend, -1 all
 HOURDAY = 24
 HOURWEEK = 24 * 7
+i_start = 0
+Backup = 100
 
 class Venue:
     def __init__(self, _id, _lat, _lon):
@@ -527,28 +530,45 @@ def write_co_location(co_location):
     texts.append('uid1,uid2,vid,frequency')
     for ss, frequency in co_location.items():
         texts.append('{},{}'.format(ss, frequency))
-    filename = working_folder + 'co_location.csv'
+    filename = working_folder + 'co_location_p{}_t{}_s{}.csv'.format(ACTIVE_PROJECT, topk, i_start)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians 
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # haversine formula 
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    km = 6367 * c
+    distance = km * 1000
+    return distance
+
 def co_occur(users):
     t_threshold = 3600  # 1 hour
+    d_threshold = 0     # Distance threshold (in meters)
     query_time = time.time()
     co_location = {}
     all_user = []
     for uid1, user in users.items():
         all_user.append(user)
     count = 0
-    i_start = 0
     for i in range(i_start, len(all_user)):
         user1 = all_user[i]
         if i % 10 == 0:
             print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
-        if i > 0 and i % 1000 == 0:
-            ### Save current progress
-            with open(working_folder + 'last_i.txt', 'w') as fi:
-                fi.write(str(i))
-            write_co_location(co_location)
+        if backup > 0:
+            if i > 0 and i % backup == 0:
+                ### Save current progress
+                with open(working_folder + 'last_i.txt', 'w') as fi:
+                    fi.write(str(i))
+                write_co_location(co_location)
         for j in range(i+1, len(all_user)):
             user2 = all_user[j]
             if user1.uid == user2.uid:
@@ -560,10 +580,13 @@ def co_occur(users):
             # debug(i,j,len(user1.checkins),len(user2.checkins))
             for c1 in user1.checkins:
                 for c2 in user2.checkins:
-                    if c1.vid != c2.vid:
+                    if d_threshold == 0 and c1.vid != c2.vid:
                         continue
                     t_diff = abs(c1.time - c2.time)
+                    d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
                     if t_diff > t_threshold:
+                        continue
+                    if d_diff > d_threshold:
                         continue
                     ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
                     co = co_location.get(ss)
@@ -579,19 +602,25 @@ def co_occur(users):
 if __name__ == '__main__':
     print("--- Program  started ---")
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"p:k:",["project=","topk="])
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:",["project=","topk=","start=","backup="])
     except getopt.GetoptError:
-        debug('SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users>', 'opt error')
+        err_msg = 'SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup>'
+        debug(err_msg, 'opt error')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            debug('SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users>', 'opt error')
+            debugerr_msg, 'opt error')
             sys.exit()
         elif opt in ("-p", "--project"):
             ACTIVE_PROJECT = int(arg)
         elif opt in ("-k", "--topk"):
             topk = int(arg)
+        elif opt in ("-s", "--start"):
+            i_start = int(arg)
+        elif opt == "--backup":
+            backup = int(arg)
     debug('Selected project: {}'.format(PROJECT_NAME[ACTIVE_PROJECT]))
+    debug('Starting iteration: {}'.format(i_start))
     if topk > 0:
         debug('Top {} users are selected'.format(topk))
     elif topk == 0:
