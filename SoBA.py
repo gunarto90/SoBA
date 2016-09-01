@@ -24,7 +24,9 @@ topk = 50           # 0 weekend, -1 all
 HOURDAY = 24
 HOURWEEK = 24 * 7
 i_start = 0
-Backup = 100
+BACKUP = 100
+CO_TIME = 3600
+CO_DISTANCE = 500
 
 class Venue:
     def __init__(self, _id, _lat, _lon):
@@ -550,9 +552,28 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = km * 1000
     return distance
 
+"""
+    <Next step of each co-location comparison>
+    IF User1 has earlier time, then it moves to its next checkins
+    ELSE IF User2 has earlier time, then it moves to its next checkins
+    ELSE IF both has the same time, then User1 move to its next checkins
+"""
+def next_co_param(c1, c2, ic1, ic2):
+    if c1.time > c2.time:
+        ic2 += 1
+    else:
+        ic1 += 1
+    return ic1, ic2
+
 def co_occur(users):
-    t_threshold = 3600  # 1 hour
-    d_threshold = 0     # Distance threshold (in meters)
+    """
+    Time and distance threshold
+    Time (in seconds)
+    Distance (in meters)
+    """
+    t_threshold = CO_TIME
+    d_threshold = CO_DISTANCE
+
     query_time = time.time()
     co_location = {}
     all_user = []
@@ -561,10 +582,11 @@ def co_occur(users):
     count = 0
     for i in range(i_start, len(all_user)):
         user1 = all_user[i]
+        # print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if i % 10 == 0:
             print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
-        if backup > 0:
-            if i > 0 and i % backup == 0:
+        if BACKUP > 0:
+            if i > 0 and i % BACKUP == 0:
                 ### Save current progress
                 with open(working_folder + 'last_i.txt', 'w') as fi:
                     fi.write(str(i))
@@ -578,22 +600,30 @@ def co_occur(users):
                 continue
             count += 1
             # debug(i,j,len(user1.checkins),len(user2.checkins))
-            for c1 in user1.checkins:
-                for c2 in user2.checkins:
-                    if d_threshold == 0 and c1.vid != c2.vid:
-                        continue
-                    t_diff = abs(c1.time - c2.time)
-                    d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
-                    if t_diff > t_threshold:
-                        continue
-                    if d_diff > d_threshold:
-                        continue
-                    ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
-                    co = co_location.get(ss)
-                    if co is None:
-                        co = 0
-                    co += 1
-                    co_location[ss] = co
+            ic1 = 0
+            ic2 = 0
+            while ic1 < len(user1.checkins) and ic2 < len(user2.checkins):
+                c1 = user1.checkins[ic1]
+                c2 = user2.checkins[ic2]
+                # print('[A]:{} ({}), [B]:{} ({})'.format(ic1, len(user1.checkins), ic2, len(user2.checkins)))
+                if d_threshold == 0 and c1.vid != c2.vid:
+                    ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
+                    continue
+                t_diff = abs(c1.time - c2.time)
+                d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
+                if t_diff > t_threshold:
+                    ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
+                    continue
+                if d_diff > d_threshold:
+                    ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
+                    continue
+                ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
+                co = co_location.get(ss)
+                if co is None:
+                    co = 0
+                co += 1
+                co_location[ss] = co
+                ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
     process_time = int(time.time() - query_time)
     print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
     write_co_location(co_location)
@@ -602,14 +632,14 @@ def co_occur(users):
 if __name__ == '__main__':
     print("--- Program  started ---")
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:",["project=","topk=","start=","backup="])
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:",["project=","topk=","start=","backup=","distance=","time="])
     except getopt.GetoptError:
-        err_msg = 'SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup>'
+        err_msg = 'SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
         debug(err_msg, 'opt error')
         sys.exit(2)
     for opt, arg in opts:
-        if opt == '-h':
-            debugerr_msg, 'opt error')
+        if opt == '-h': 
+            debug(err_msg, 'opt error')
             sys.exit()
         elif opt in ("-p", "--project"):
             ACTIVE_PROJECT = int(arg)
@@ -618,9 +648,14 @@ if __name__ == '__main__':
         elif opt in ("-s", "--start"):
             i_start = int(arg)
         elif opt == "--backup":
-            backup = int(arg)
+            BACKUP = int(arg)
+        elif opt == "--distance":
+            CO_DISTANCE = int(arg)
+        elif opt == "--time":
+            CO_TIME = int(arg)
     debug('Selected project: {}'.format(PROJECT_NAME[ACTIVE_PROJECT]))
     debug('Starting iteration: {}'.format(i_start))
+    debug('Backup every {} users'.format(BACKUP))
     if topk > 0:
         debug('Top {} users are selected'.format(topk))
     elif topk == 0:
