@@ -18,7 +18,6 @@ from math import radians, cos, sin, asin, sqrt
 # import hdbscan  # https://github.com/lmcinnes/hdbscan
 # import seaborn as sns
 
-PROJECT_NAME = ['Gowalla', 'Brightkite']
 ACTIVE_PROJECT = 0  # 0 Gowalla dataset, 1 Brightkite dataset
 topk = 50           # 0 weekend, -1 all
 HOURDAY = 24
@@ -27,6 +26,12 @@ i_start = 0
 BACKUP = 100
 CO_TIME = 3600
 CO_DISTANCE = 500
+
+dataset = ["gowalla", "brightkite"]
+CHECKIN_FILE = 'checkin.csv'
+FRIEND_FILE = 'friend.csv'
+USER_FILE = 'user.csv'
+VENUE_FILE = 'venue.csv'
 
 class Venue:
     def __init__(self, _id, _lat, _lon):
@@ -93,22 +98,21 @@ class User:
     def __str__(self):
         return '{},{}'.format(self.id, len(self.checkins))
 
-dataset = ["gowalla", "brightkite"]
-base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
-working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
-weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
-
-CHECKIN_FILE = 'checkin.csv'
-FRIEND_FILE = 'friend.csv'
-USER_FILE = 'user.csv'
-VENUE_FILE = 'venue.csv'
-
-CHECKIN_WEEKEND = weekend_folder + CHECKIN_FILE
-FRIEND_WEEKEND = weekend_folder + FRIEND_FILE
-USER_WEEKEND = weekend_folder + USER_FILE
-VENUE_WEEKEND = weekend_folder + VENUE_FILE
-USER_DIST_WEEKEND = weekend_folder + 'user_dist.csv'
-VENUE_CLUSTER_WEEKEND = weekend_folder + 'venue_cluster.csv'
+def init_folder():
+    global base_folder, working_folder, weekend_folder
+    global CHECKIN_WEEKEND, FRIEND_WEEKEND, USER_WEEKEND, VENUE_WEEKEND
+    global USER_DIST_WEEKEND, VENUE_CLUSTER_WEEKEND
+    ### Update folder based on Active project
+    base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
+    working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
+    weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
+    
+    CHECKIN_WEEKEND = weekend_folder + CHECKIN_FILE
+    FRIEND_WEEKEND = weekend_folder + FRIEND_FILE
+    USER_WEEKEND = weekend_folder + USER_FILE
+    VENUE_WEEKEND = weekend_folder + VENUE_FILE
+    USER_DIST_WEEKEND = weekend_folder + 'user_dist.csv'
+    VENUE_CLUSTER_WEEKEND = weekend_folder + 'venue_cluster.csv'
 
 # Initializiation functions
 def init_checkins(venues, file=None):
@@ -206,6 +210,7 @@ def init_venues(file=None):
     return venues
 
 def init():
+    init_folder()
     make_sure_path_exists(working_folder)
     ### Top k users' checkins
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
@@ -532,7 +537,7 @@ def write_co_location(co_location):
     texts.append('uid1,uid2,vid,frequency')
     for ss, frequency in co_location.items():
         texts.append('{},{}'.format(ss, frequency))
-    filename = working_folder + 'co_location_p{}_t{}_s{}.csv'.format(ACTIVE_PROJECT, topk, i_start)
+    filename = working_folder + 'co_location_p{}_k{}_s{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, CO_TIME, CO_DISTANCE)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
@@ -653,20 +658,17 @@ if __name__ == '__main__':
             CO_DISTANCE = int(arg)
         elif opt == "--time":
             CO_TIME = int(arg)
-    debug('Selected project: {}'.format(PROJECT_NAME[ACTIVE_PROJECT]))
+    debug('Selected project: {}'.format(dataset[ACTIVE_PROJECT]))
     debug('Starting iteration: {}'.format(i_start))
     debug('Backup every {} users'.format(BACKUP))
+    debug('Co-location time threshold: {}'.format(CO_TIME))
+    debug('Co-location distance threshold: {}'.format(CO_DISTANCE))
     if topk > 0:
         debug('Top {} users are selected'.format(topk))
     elif topk == 0:
         debug('Evaluating weekend checkins')
     elif topk == -1:
         debug('Evaluating all checkins')
-
-    ### Update folder based on Active project
-    base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
-    working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
-    weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
     
     ### Initialize dataset
     users, friends, venues = init()
