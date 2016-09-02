@@ -23,6 +23,7 @@ topk = 50           # 0 weekend, -1 all
 HOURDAY = 24
 HOURWEEK = 24 * 7
 i_start = 0
+i_finish = -1
 BACKUP = 100
 CO_TIME = 3600
 CO_DISTANCE = 500
@@ -537,7 +538,7 @@ def write_co_location(co_location):
     texts.append('uid1,uid2,vid,frequency')
     for ss, frequency in co_location.items():
         texts.append('{},{}'.format(ss, frequency))
-    filename = working_folder + 'co_location_p{}_k{}_s{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, CO_TIME, CO_DISTANCE)
+    filename = working_folder + 'co_location_p{}_k{}_s{}_f{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, i_finish, CO_TIME, CO_DISTANCE)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
@@ -579,24 +580,28 @@ def co_occur(users):
     t_threshold = CO_TIME
     d_threshold = CO_DISTANCE
 
+    global i_start, i_finish
+
     query_time = time.time()
     co_location = {}
     all_user = []
     for uid1, user in users.items():
         all_user.append(user)
     count = 0
-    for i in range(i_start, len(all_user)):
+    if i_finish == -1:
+        i_finish = len(all_user)
+    for i in range(i_start, i_finish):
         user1 = all_user[i]
         # print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if i % 10 == 0:
             print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if BACKUP > 0:
-            if i > 0 and i % BACKUP == 0:
+            if i > i_start and i % BACKUP == 0:
                 ### Save current progress
-                with open(working_folder + 'last_i.txt', 'w') as fi:
+                with open(working_folder + 'last_i_p{}_k{}_s{}_f{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, i_finish, CO_TIME, CO_DISTANCE), 'w') as fi:
                     fi.write(str(i))
                 write_co_location(co_location)
-        for j in range(i+1, len(all_user)):
+        for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
                 continue
@@ -637,7 +642,7 @@ def co_occur(users):
 if __name__ == '__main__':
     print("--- Program  started ---")
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:",["project=","topk=","start=","backup=","distance=","time="])
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish","backup=","distance=","time="])
     except getopt.GetoptError:
         err_msg = 'SoBA.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
         debug(err_msg, 'opt error')
@@ -652,6 +657,8 @@ if __name__ == '__main__':
             topk = int(arg)
         elif opt in ("-s", "--start"):
             i_start = int(arg)
+        elif opt in ("-f", "--finish"):
+            i_finish = int(arg)
         elif opt == "--backup":
             BACKUP = int(arg)
         elif opt == "--distance":
