@@ -1,19 +1,21 @@
 import time
 import os
 import re
+import sys
+import getopt
 
 from math import radians, cos, sin, asin, sqrt
 from general_utilities import *
 from base import *
 from classes import *
 
-def write_co_location(co_location):
+def write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder):
     ### Write to file
     texts = []
     texts.append('uid1,uid2,vid,frequency')
     for ss, frequency in co_location.items():
         texts.append('{},{}'.format(ss, frequency))
-    filename = working_folder + 'co_location_p{}_k{}_s{}_f{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, i_finish, CO_TIME, CO_DISTANCE)
+    filename = working_folder + 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
@@ -46,23 +48,20 @@ def next_co_param(c1, c2, ic1, ic2):
         ic1 += 1
     return ic1, ic2
 
-def co_occur(users, CO_TIME, CO_DISTANCE):
-    """
+"""
     Time and distance threshold
     Time (in seconds)
     Distance (in meters)
-    """
-    t_threshold = CO_TIME
-    d_threshold = CO_DISTANCE
-
-    global i_start, i_finish
-
+"""
+def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, working_folder):
     query_time = time.time()
     co_location = {}
     all_user = []
     for uid1, user in users.items():
         all_user.append(user)
     count = 0
+    texts = []
+    texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg')
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
@@ -73,9 +72,9 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
-                with open(working_folder + 'last_i_p{}_k{}_s{}_f{}_t{}_d{}.csv'.format(ACTIVE_PROJECT, topk, i_start, i_finish, CO_TIME, CO_DISTANCE), 'w') as fi:
+                with open(working_folder + 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish, ), 'w') as fi:
                     fi.write(str(i))
-                write_co_location(co_location)
+                write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
         for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
@@ -95,6 +94,7 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
                     continue
                 t_diff = abs(c1.time - c2.time)
+                t_avg = (c1.time + c2.time)/2
                 d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
                 if t_diff > t_threshold:
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
@@ -103,6 +103,7 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
                     continue
                 ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
+                texts.append('{},{},{},{},{},{},{},{}'.format(user1.uid, user2.uid, c1.vid, t_diff, 1, c1.time, c2.time, t_avg))
                 co = co_location.get(ss)
                 if co is None:
                     co = 0
@@ -111,29 +112,41 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
                 ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
     process_time = int(time.time() - query_time)
     print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
-    write_co_location(co_location)
+    write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
+
+    filename = working_folder + 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish)
+    remove_file_if_exists(filename)
+    write_to_file_buffered(filename, texts)
 
 """
+Map function
 p: project (gowalla or brightkite)
 k: top k (-1 all, 0 weekend, others are top k users)
 t: time threshold
 d: distance threshold
 n: number of chunks
 """
-def map(p, k, d, t, n):
-    pass
+def mapping(p, k, d, t, BACKUP, working_folder, i_start=0, i_finish=-1):
+    ### Initialize dataset
+    users, friends, venues = init(p, k)
+    ### Sorting users' checkins based on their timestamp, ascending ordering
+    uids = sort_user_checkins(users)
+    ### Co-location
+    co_occur(users, p, k, t, d, BACKUP, i_start, i_finish, working_folder)
 
 """
+Reduce function
 p: project (gowalla or brightkite)
 k: top k (-1 all, 0 weekend, others are top k users)
 t: time threshold
 d: distance threshold
 """
-def reduce(p, k, d, t):
+def reducing(p, k, d, t):
     debug("start reduce processes")
-    pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
+    # pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
+    pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
     data = {}
-    base_folder, working_folder, weekend_folder = init_folder(p)
+    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
     folder = working_folder
     # print(folder)
     for file in os.listdir(folder):
@@ -163,10 +176,79 @@ def reduce(p, k, d, t):
     remove_file_if_exists(folder + output)
     write_to_file_buffered(folder + output, texts)
 
+def evaluation(p, k, d, t):
+    pass
+
+def test(p, k, d, t, i):
+    print(p, k, d, t, i)
+    time.sleep(1)
+
 # Main function
 if __name__ == '__main__':
+    ACTIVE_PROJECT = 0
+    topk = 0
+    i_start = 0
+    i_finish = -1
+    BACKUP = 1000
+    CO_DISTANCE = 500
+    CO_TIME = 3600  
     print("--- Program  started ---")
-    # reduce(0, -1, 500, 3600)
-    # reduce(0, -1, 0, 3600)
-    # reduce(0, 0, 500, 3600)
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish","backup=","distance=","time="])
+    except getopt.GetoptError:
+        err_msg = 'colocation.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
+        debug(err_msg, 'opt error')
+        sys.exit(2)
+    if len(opts) > 0:
+        for opt, arg in opts:
+            if opt == '-h': 
+                debug(err_msg, 'opt error')
+                sys.exit()
+            elif opt in ("-p", "--project"):
+                ACTIVE_PROJECT = int(arg)
+            elif opt in ("-k", "--topk"):
+                topk = int(arg)
+            elif opt in ("-s", "--start"):
+                i_start = int(arg)
+            elif opt in ("-f", "--finish"):
+                i_finish = int(arg)
+            elif opt == "--backup":
+                BACKUP = int(arg)
+            elif opt == "--distance":
+                CO_DISTANCE = int(arg)
+            elif opt == "--time":
+                CO_TIME = int(arg)
+
+        dataset, base_folder, working_folder, weekend_folder = init_folder(ACTIVE_PROJECT)
+
+        debug('Selected project: {}'.format(dataset[ACTIVE_PROJECT]))
+        debug('Starting position: {}'.format(i_start))
+        debug('Finishing position: {}'.format(i_finish))
+        debug('Backup every {} users'.format(BACKUP))
+        debug('Co-location time threshold: {}'.format(CO_TIME))
+        debug('Co-location distance threshold: {}'.format(CO_DISTANCE))
+        if topk > 0:
+            debug('Top {} users are selected'.format(topk))
+        elif topk == 0:
+            debug('Evaluating weekend checkins')
+        elif topk == -1:
+            debug('Evaluating all checkins')
+        mapping(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, BACKUP, working_folder, i_start, i_finish)
+        # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
+        # evaluation(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
+    else:
+        ps = [0]
+        ks = [100]
+        ts = [3600]
+        ds = [0]
+
+        for p in ps:
+            for k in ks:
+                for d in ds:
+                    for t in ts:
+                        print('p:{}, k:{}, d:{}, t:{}'.format(p, k, d, t))
+                        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                        mapping(p, k, d, t, BACKUP, working_folder)
+                        # reducing(p, k, d, t)
+                        # evaluation(p, k, d, t)
     print("--- Program finished ---")
