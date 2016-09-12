@@ -3,13 +3,16 @@ import time
 from datetime import date
 from datetime import datetime
 
+from classes import *
+from general_utilities import *
+
 base_folder = '' 
 working_folder = '' 
 weekend_folder = ''
 
 def init_variables():
     filename = 'variables.json'
-    global dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE
+    global dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER
     with open(filename) as data_file:
         data = json.load(data_file)
         dataset = data["dataset"]
@@ -19,12 +22,13 @@ def init_variables():
         VENUE_FILE      = data["filenames"]["venue"]
         USER_DIST       = data["filenames"]["user_dist"]
         VENUE_CLUSTER   = data["filenames"]["venue_cluster"]
+    return dataset
 
 def init_folder(ACTIVE_PROJECT, WEEKEND=False):
     global base_folder, working_folder, weekend_folder
     global CHECKIN_WEEKEND, FRIEND_WEEKEND, USER_WEEKEND, VENUE_WEEKEND
     global USER_DIST_WEEKEND, VENUE_CLUSTER_WEEKEND
-    init_variables()
+    dataset = init_variables()
     ### Update folder based on Active project
     base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
     working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
@@ -38,7 +42,7 @@ def init_folder(ACTIVE_PROJECT, WEEKEND=False):
         USER_DIST_WEEKEND = weekend_folder + USER_DIST
         VENUE_CLUSTER_WEEKEND = weekend_folder + VENUE_CLUSTER
 
-    return base_folder, working_folder, weekend_folder
+    return dataset, base_folder, working_folder, weekend_folder
 
 # Initializiation functions
 def init_checkins(venues, file=None):
@@ -135,8 +139,12 @@ def init_venues(file=None):
     debug('There are {} errors in venue file'.format(error))
     return venues
 
-def init(ACTIVE_PROJECT):
-    init_folder(ACTIVE_PROJECT)
+def init(ACTIVE_PROJECT, topk):
+    debug("Starting initialization")
+    WEEKEND = False
+    if topk == 0:
+        WEEKEND = True
+    dataset, base_folder, working_folder, weekend_folder = init_folder(ACTIVE_PROJECT, WEEKEND)
     make_sure_path_exists(working_folder)
     ### Top k users' checkins
     checkins_file = working_folder + 'checkin{}.csv'.format(topk)
@@ -165,3 +173,13 @@ def init(ACTIVE_PROJECT):
     users = init_checkins(venues, checkins_file)
     friends = init_friendships(users, friend_file)
     return users, friends, venues
+
+def sort_user_checkins(users):
+    uids = []
+    query_time = time.time()
+    for uid, user in users.items():
+        user.checkins = sorted(user.checkins, key=lambda checkin: checkin.time, reverse=False)   # sort by checkin time
+        uids.append(uid)
+    process_time = int(time.time() - query_time)
+    print('Sorting {0:,} users in {1} seconds'.format(len(users), process_time))
+    return uids

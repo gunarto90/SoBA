@@ -1,3 +1,5 @@
+import sys
+
 class Venue:
     def __init__(self, _id, _lat, _lon):
         self.vid = _id               # Venue id
