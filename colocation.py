@@ -69,7 +69,7 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
         user1 = all_user[i]
         # print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if i % 10 == 0:
-            print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
+            debug('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
@@ -90,7 +90,7 @@ def co_occur(users, CO_TIME, CO_DISTANCE):
             while ic1 < len(user1.checkins) and ic2 < len(user2.checkins):
                 c1 = user1.checkins[ic1]
                 c2 = user2.checkins[ic2]
-                # print('[A]:{} ({}), [B]:{} ({})'.format(ic1, len(user1.checkins), ic2, len(user2.checkins)))
+                # debug('[A]:{} ({}), [B]:{} ({})'.format(ic1, len(user1.checkins), ic2, len(user2.checkins)))
                 if d_threshold == 0 and c1.vid != c2.vid:
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
                     continue
@@ -130,7 +130,7 @@ t: time threshold
 d: distance threshold
 """
 def reduce(p, k, d, t):
-    print("start reduce processes")
+    debug("start reduce processes")
     pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
     data = {}
     base_folder, working_folder, weekend_folder = init_folder(p)
@@ -139,7 +139,7 @@ def reduce(p, k, d, t):
     for file in os.listdir(folder):
         if file.endswith(".csv"):
             if pattern.match(file):
-                print(file)
+                debug(file)
                 with open(folder + file, 'r') as fr:
                     for line in fr:
                         if line.startswith('uid'):
@@ -156,7 +156,7 @@ def reduce(p, k, d, t):
                             f = f + get
                             data[_id] = f
     output = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
-    print(output)
+    debug(output)
     texts = []
     for _id, f in data.items():
         texts.append('{},{}'.format(_id, f))
@@ -166,7 +166,7 @@ def reduce(p, k, d, t):
 # Main function
 if __name__ == '__main__':
     print("--- Program  started ---")
-    reduce(0, -1, 500, 3600)
-    reduce(0, -1, 0, 3600)
-    reduce(0, 0, 500, 3600)
+    # reduce(0, -1, 500, 3600)
+    # reduce(0, -1, 0, 3600)
+    # reduce(0, 0, 500, 3600)
     print("--- Program finished ---")
