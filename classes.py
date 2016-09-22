@@ -31,6 +31,18 @@ class Checkin:
     def __str__(self):
         return '{},{},{},{},{}'.format(self.uid, self.time, self.lat, self.lon, self.vid)
 
+class Friend:
+    def __init__(self, u1, u2):
+        if u1 <= u2:
+            self.u1 = u1
+            self.u2 = u2
+        else:
+            self.u1 = u2
+            self.u2 = u1
+
+    def __str__(self):
+        return '{},{}'.format(self.u1, self.u2)
+
 class User:
     def __init__(self, _id):
         self.uid = _id              # User id
