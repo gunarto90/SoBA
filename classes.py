@@ -40,6 +40,20 @@ class Friend:
             self.u1 = u2
             self.u2 = u1
 
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return self.u1 == other.u1 and self.u2 == other.u2
+
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        """Override the default hash behavior (that returns the id or the object)"""
+        return hash(tuple(sorted(self.__dict__.items())))
+
     def __str__(self):
         return '{},{}'.format(self.u1, self.u2)
 
@@ -73,6 +87,20 @@ class User:
             if venue is None or venue.cluster == -1:
                 continue
             self.dist[venue.cluster] += 1
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return self.uid == other.uid
+
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        """Override the default hash behavior (that returns the id or the object)"""
+        return hash(tuple(sorted(self.__dict__.items())))
 
     def __str__(self):
         return '{},{}'.format(self.id, len(self.checkins))
