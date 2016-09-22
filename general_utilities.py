@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pympler import asizeof
 
 IS_DEBUG = True
@@ -51,6 +52,6 @@ def debug(message, callerid=None):
     if IS_DEBUG == False:
         return
     if callerid is None:
-        print('[DEBUG] {0}'.format(message))
+        print('[DEBUG] [{1}] {0}'.format(message, datetime.now()))
     else :
-        print('[DEBUG] <Caller: {1}> {0}'.format(message, callerid))
+        print('[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now()))
