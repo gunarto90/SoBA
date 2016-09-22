@@ -141,19 +141,20 @@ k: top k (-1 all, 0 weekend, others are top k users)
 t: time threshold
 d: distance threshold
 """
-def reducing(p, k, d, t):
+def reducing(p, k, d, t, working_folder):
     debug("start reduce processes")
     # pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
     pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
     data = {}
-    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-    folder = working_folder
-    # print(folder)
-    for file in os.listdir(folder):
+    # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+    # folder = working_folder
+    # debug(working_folder)
+    ### Extract frequency of meeting
+    for file in os.listdir(working_folder):
         if file.endswith(".csv"):
             if pattern.match(file):
                 debug(file)
-                with open(folder + file, 'r') as fr:
+                with open(working_folder + file, 'r') as fr:
                     for line in fr:
                         if line.startswith('uid'):
                             continue
@@ -169,14 +170,34 @@ def reducing(p, k, d, t):
                             f = f + get
                             data[_id] = f
     output = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
-    debug(output)
     texts = []
     for _id, f in data.items():
         texts.append('{},{}'.format(_id, f))
-    remove_file_if_exists(folder + output)
-    write_to_file_buffered(folder + output, texts)
+    remove_file_if_exists(working_folder + output)
+    write_to_file_buffered(working_folder + output, texts)
+    debug('Finished writing all co location summaries at {}'.format(output))
 
-def evaluation(p, k, d, t):
+    ### Extract raw co-occurrence data
+    texts.clear()
+    pattern = re.compile('(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
+    for file in os.listdir(working_folder):
+        if file.endswith(".csv"):
+            if pattern.match(file):
+                debug(file)
+                with open(working_folder + file, 'r') as fr:
+                    for line in fr:
+                        if line.startswith('uid'):
+                            continue
+                        texts.append(line.strip())
+    output = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    remove_file_if_exists(working_folder + output)
+    write_to_file_buffered(working_folder + output, texts)
+    debug('Finished writing all raw co location data at {}'.format(output))
+
+def extraction(p, k, d, t, working_folder):
+    pass
+
+def evaluation(p, k, d, t, working_folder):
     pass
 
 def test(p, k, d, t, i):
@@ -196,7 +217,7 @@ if __name__ == '__main__':
     try:
         opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish","backup=","distance=","time="])
     except getopt.GetoptError:
-        err_msg = 'colocation.py -p <0 gowalla/ 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
+        err_msg = 'colocation.py -p <0 gowalla / 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
         debug(err_msg, 'opt error')
         sys.exit(2)
     if len(opts) > 0:
@@ -234,11 +255,11 @@ if __name__ == '__main__':
         elif topk == -1:
             debug('Evaluating all checkins')
         mapping(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, BACKUP, working_folder, i_start, i_finish)
-        # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
+        # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, working_folder)
         # evaluation(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
     else:
         ps = [0]
-        ks = [100]
+        ks = [0]
         ts = [3600]
         ds = [0]
 
@@ -248,7 +269,7 @@ if __name__ == '__main__':
                     for t in ts:
                         print('p:{}, k:{}, d:{}, t:{}'.format(p, k, d, t))
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                        mapping(p, k, d, t, BACKUP, working_folder)
-                        # reducing(p, k, d, t)
+                        # mapping(p, k, d, t, BACKUP, working_folder)
+                        reducing(p, k, d, t, working_folder)
                         # evaluation(p, k, d, t)
     print("--- Program finished ---")
