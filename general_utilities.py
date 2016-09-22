@@ -1,4 +1,5 @@
 import os
+import math
 from datetime import datetime
 from pympler import asizeof
 
@@ -55,3 +56,13 @@ def debug(message, callerid=None):
         print('[DEBUG] [{1}] {0}'.format(message, datetime.now()))
     else :
         print('[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now()))
+
+def entropy(data):
+    total = 0.0
+    ent = 0
+    for item in data:
+        total += item
+    for item in data:
+        pi = float(item)/total
+        ent -= pi * math.log(pi)
+    return ent
