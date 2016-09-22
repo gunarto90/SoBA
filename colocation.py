@@ -195,7 +195,38 @@ def reducing(p, k, d, t, working_folder):
     debug('Finished writing all raw co location data at {}'.format(output))
 
 def extraction(p, k, d, t, working_folder):
-    pass
+    stat_f = {}
+    stat_d = {}
+    ### Open file
+    fname = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    debug(fname)
+    with open(working_folder + fname, 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            u1 = split[0]
+            u2 = split[1]
+            vid = split[2]
+            f = int(split[3])
+            ### Extract frequency
+            friend = Friend(u1, u2)
+            found = stat_f.get(friend)
+            if found is None:
+                found = 0
+            stat_f[friend] = found + f
+            ### Extract diversity
+            ### Still error ???
+            temp = stat_d.get(friend)
+            if temp is None:
+                temp = []
+            temp.append(f)
+            stat_d[friend] = temp
+            # debug(stat_d.get(friend))
+    ### Frequency
+    # for friend, frequency in stat_f.items():
+    #     debug('{}\t{}'.format(friend, frequency))
+    ### Entropy (Diversity)
+    # for friend, data in stat_d.items():
+    #     debug('{}\t{}'.format(friend, entropy(data)))
 
 def evaluation(p, k, d, t, working_folder):
     pass
@@ -270,6 +301,7 @@ if __name__ == '__main__':
                         print('p:{}, k:{}, d:{}, t:{}'.format(p, k, d, t))
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
                         # mapping(p, k, d, t, BACKUP, working_folder)
-                        reducing(p, k, d, t, working_folder)
+                        # reducing(p, k, d, t, working_folder)
+                        extraction(p, k, d, t, working_folder)
                         # evaluation(p, k, d, t)
     print("--- Program finished ---")
