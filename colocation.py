@@ -66,9 +66,8 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
         user1 = all_user[i]
-        # print('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
         if i % 10 == 0:
-            debug('{} of {} users ({}%) [{}]'.format(i, len(all_user), float(i)*100/len(all_user), datetime.now()))
+            debug('{} of {} users ({}%)'.format(i, len(all_user), float(i)*100/len(all_user)))
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
@@ -195,9 +194,12 @@ def reducing(p, k, d, t, working_folder):
     debug('Finished writing all raw co location data at {}'.format(output))
 
 def extraction(p, k, d, t, working_folder):
-    stat_f = {}
-    stat_d = {}
-    ### Open file
+    stat_f = {}     # frequency
+    stat_d = {}     # diversity
+    stat_t = {}     # time diff on co-occurrence
+    stat_td = {}    # duration
+    stat_ts = {}    # stability
+    ### Extract frequency and diversity
     fname = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
     debug(fname)
     with open(working_folder + fname, 'r') as fr:
@@ -214,19 +216,51 @@ def extraction(p, k, d, t, working_folder):
                 found = 0
             stat_f[friend] = found + f
             ### Extract diversity
-            ### Still error ???
-            temp = stat_d.get(friend)
-            if temp is None:
-                temp = []
-            temp.append(f)
-            stat_d[friend] = temp
-            # debug(stat_d.get(friend))
+            found = stat_d.get(friend)
+            if found is None:
+                found = []
+            found.append(f)
+            stat_d[friend] = found
+    ### Extract duration and stability
+    fname = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    debug(fname)
+    with open(working_folder + fname, 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            # user1,user2,vid,t_diff,frequency,time1,time2,t_avg
+            if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
+                continue
+            u1 = split[0]
+            u2 = split[1]
+            vid = split[2]
+            t_diff = int(split[3])
+            # Extract duration
+            friend = Friend(u1, u2)
+            found = stat_t.get(friend)
+            if found is None:
+                found = []
+            found.append(t_diff)
+            stat_t[friend] = found
+    duration = 0
+    max_duration = 0
+    for friend, data in stat_t.items():
+        duration = max(data) - min(data)
+        if duration > max_duration:
+            max_duration = duration
+        stat_td[friend] = duration
+    for friend, data in stat_td.items():
+        stat_td[friend] = stat_td[friend] / max_duration
+
     ### Frequency
     # for friend, frequency in stat_f.items():
     #     debug('{}\t{}'.format(friend, frequency))
     ### Entropy (Diversity)
     # for friend, data in stat_d.items():
     #     debug('{}\t{}'.format(friend, entropy(data)))
+    ### Duration
+    for friend, duration in stat_td.items():
+        debug('{}\t{}'.format(friend, duration))
+    ### Stability
 
 def evaluation(p, k, d, t, working_folder):
     pass
