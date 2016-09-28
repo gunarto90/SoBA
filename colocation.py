@@ -4,7 +4,7 @@ import re
 import sys
 import getopt
 
-from math import radians, cos, sin, asin, sqrt
+from math import radians, cos, sin, asin, sqrt, pow, exp
 from general_utilities import *
 from base import *
 from classes import *
@@ -196,32 +196,15 @@ def reducing(p, k, d, t, working_folder):
 def extraction(p, k, d, t, working_folder):
     stat_f = {}     # frequency
     stat_d = {}     # diversity
+    stat_ld = {}    # co-occurrence between user in each venue (distinct)
+    stat_lv = {}    # co-occurrence between user in each venue
+    stat_l = {}     # co-occurrence between user in each venue (dictionary)
     stat_t = {}     # time diff on co-occurrence
     stat_td = {}    # duration
     stat_ts = {}    # stability
-    ### Extract frequency and diversity
-    fname = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
-    debug(fname)
-    with open(working_folder + fname, 'r') as fr:
-        for line in fr:
-            split = line.strip().split(',')
-            u1 = split[0]
-            u2 = split[1]
-            vid = split[2]
-            f = int(split[3])
-            ### Extract frequency
-            friend = Friend(u1, u2)
-            found = stat_f.get(friend)
-            if found is None:
-                found = 0
-            stat_f[friend] = found + f
-            ### Extract diversity
-            found = stat_d.get(friend)
-            if found is None:
-                found = []
-            found.append(f)
-            stat_d[friend] = found
-    ### Extract duration and stability
+    u_xy = {}       # u_xy = Average meeting time = delta_xy / |Theta_xy|
+    ws = {}         # stability weight
+    ### Extract data from file
     fname = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
     debug(fname)
     with open(working_folder + fname, 'r') as fr:
@@ -234,13 +217,46 @@ def extraction(p, k, d, t, working_folder):
             u2 = split[1]
             vid = split[2]
             t_diff = int(split[3])
-            # Extract duration
+            friend = Friend(u1, u2)
+            ### Extract frequency
+            found = stat_f.get(friend)
+            if found is None:
+                found = 0
+            stat_f[friend] = found + 1
+            ### Extract diversity
+            found = stat_l.get(friend)
+            if found is None:
+                found = {}
+            found_vid = found.get(vid)
+            if found_vid is None:
+                found_vid = 0
+            found_vid += 1
+            found[vid] = found_vid
+            stat_l[friend] = found
+            ### Extract duration
             friend = Friend(u1, u2)
             found = stat_t.get(friend)
             if found is None:
                 found = []
             found.append(t_diff)
             stat_t[friend] = found
+            ### Extract co-occurrence on a venue
+            found = stat_lv.get(friend)
+            if found is None:
+                found = []
+            found.append(vid)
+            stat_lv[friend] = found
+            if vid not in stat_lv:
+                stat_ld[friend] = found
+    ### Extract diversity
+    for friend, dictionary in stat_l.items():
+        found = stat_d.get(friend)
+        if found is None:
+            found = []            
+        for vid, x in dictionary.items():
+            found.append(x)
+        stat_d[friend] = found    
+    ### Extract duration
     duration = 0
     max_duration = 0
     for friend, data in stat_t.items():
@@ -249,18 +265,53 @@ def extraction(p, k, d, t, working_folder):
             max_duration = duration
         stat_td[friend] = duration
     for friend, data in stat_td.items():
-        stat_td[friend] = stat_td[friend] / max_duration
-
+        stat_td[friend] = float(stat_td[friend]) / float(max_duration)
+        Theta_xy = stat_f.get(friend)
+        if Theta_xy is None:
+            debug('Error: Co-occurrence not found between {}'.format(friend))
+            continue
+        u_xy[friend] = float(stat_td.get(friend)) / float(Theta_xy)
+    ### Extract stability
+    sigma_z = {}    # Sum of t_xy^z-u_xy
+    rho = {}        # standard deviation of co-occurrence time difference with average
+    for friend, data in stat_t.items():
+        for t in data:
+            found = sigma_z.get(friend)
+            if found is None:
+                found = 0
+            mean = u_xy.get(friend)
+            if mean is None:
+                debug('Error: mean u_xy not found between {}'.format(friend))
+                continue
+            if mean == 0:
+                # debug('Error: mean u_xy is 0 between {}'.format(friend))
+                continue
+            found += pow( (float(t) / float(max_duration)) / mean, 2)
+            sigma_z[friend] = found
+        if sigma_z.get(friend) is None:
+            # debug('Sigma z between {} is not found'.format(friend))
+            continue
+        if stat_ld.get(friend) is None:
+            # debug('Distinct location count between {} is not found'.format(friend))
+            continue
+        rho[friend] = sqrt(sigma_z[friend] / len(stat_ld[friend]))
+        if u_xy.get(friend) is None:
+            continue
+        ws[friend] = exp(-1*(u_xy[friend]+rho[friend]))
+        debug(ws[friend], clean=True)
+    ### Debug
     ### Frequency
     # for friend, frequency in stat_f.items():
-    #     debug('{}\t{}'.format(friend, frequency))
+    #     debug('{},{}'.format(friend, frequency), clean=True)
     ### Entropy (Diversity)
     # for friend, data in stat_d.items():
-    #     debug('{}\t{}'.format(friend, entropy(data)))
+    #     debug('{},{}'.format(friend, entropy(data)), clean=True)
     ### Duration
-    for friend, duration in stat_td.items():
-        debug('{}\t{}'.format(friend, duration))
+    # for friend, duration in stat_td.items():
+    #     debug('{}\t{}'.format(friend, duration))
     ### Stability
+    # for friend, weight in ws.items():
+    #     debug('{},{}'.format(friend, weight), clean=True)
 
 def evaluation(p, k, d, t, working_folder):
     pass
