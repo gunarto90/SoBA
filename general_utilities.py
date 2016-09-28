@@ -49,13 +49,19 @@ def write_to_file_buffered(filename, text_list, append=True):
     if temp_str != "":
         write_to_file(filename, temp_str, append, add_linefeed=False)
 
-def debug(message, callerid=None):
+def debug(message, callerid=None, clean=False):
     if IS_DEBUG == False:
         return
-    if callerid is None:
-        print('[DEBUG] [{1}] {0}'.format(message, datetime.now()))
-    else :
-        print('[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now()))
+    if clean is False:
+        if callerid is None:
+            print('[DEBUG] [{1}] {0}'.format(message, datetime.now()))
+        else :
+            print('[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now()))
+    else:
+        if callerid is None:
+            print('{0}'.format(message))
+        else :
+            print('{0} <Caller: {1}>'.format(message, callerid))
 
 def entropy(data):
     total = 0.0
