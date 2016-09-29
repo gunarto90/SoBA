@@ -21,14 +21,15 @@ def init_variables():
         VENUE_FILE      = data["filenames"]["venue"]
         USER_DIST       = data["filenames"]["user_dist"]
         VENUE_CLUSTER   = data["filenames"]["venue_cluster"]
-    return dataset
+    return dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER
 
 def init_folder(ACTIVE_PROJECT, WEEKEND=False):
     global base_folder, working_folder, weekend_folder
     global CHECKIN_WEEKEND, FRIEND_WEEKEND, USER_WEEKEND, VENUE_WEEKEND
     global USER_DIST_WEEKEND, VENUE_CLUSTER_WEEKEND
-    dataset = init_variables()
+    dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
     ### Update folder based on Active project
+    ACTIVE_PROJECT = int(ACTIVE_PROJECT)
     base_folder = "{0}/base/".format(dataset[ACTIVE_PROJECT])
     working_folder = "{0}/working/".format(dataset[ACTIVE_PROJECT])
     weekend_folder = "{0}/weekend/".format(dataset[ACTIVE_PROJECT])
