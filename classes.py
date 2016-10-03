@@ -53,6 +53,8 @@ class Checkin:
 
 class Friend:
     def __init__(self, u1, u2):
+        u1 = int(u1)
+        u2 = int(u2)
         if u1 <= u2:
             self.u1 = u1
             self.u2 = u2
@@ -64,7 +66,7 @@ class Friend:
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
-        return self.u1 == other.u1 and self.u2 == other.u2
+        return (self.u1 == other.u1 and self.u2 == other.u2) or (self.u1 == other.u2 and self.u2 == other.u1)
 
     def __ne__(self, other):
         """Define a non-equality test"""
@@ -124,3 +126,22 @@ class User:
 
     def __str__(self):
         return '{},{}'.format(self.id, len(self.checkins))
+
+class Evaluation:
+    def __init__(self, u1, u2):
+        u1 = int(u1)
+        u2 = int(u2)
+        if u1 <= u2:
+            self.u1 = u1
+            self.u2 = u2
+        else:
+            self.u1 = u2
+            self.u2 = u1
+        self.link = 0
+        self.frequency = 0.0
+        self.diversity = 0.0
+        self.duration  = 0.0
+        self.stability = 0.0
+
+    def __str__(self):
+        return '{},{},{},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.link)
