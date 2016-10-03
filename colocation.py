@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import getopt
+import operator
 
 from math import radians, cos, sin, asin, sqrt, pow, exp
 from general_utilities import *
@@ -18,6 +19,16 @@ def write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_fi
     filename = working_folder + 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
+
+def write_evaluation(summaries, p, k, t, d):
+    texts = []
+    texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
+    for friend, evaluation in summaries.items():
+        texts.append(str(evaluation))
+    filename = working_folder + 'evaluation_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    remove_file_if_exists(filename)
+    write_to_file_buffered(filename, texts)
+    debug('Finished writing to {}'.format(filename))
 
 def haversine(lat1, lon1, lat2, lon2):
     """
@@ -67,7 +78,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
     for i in range(i_start, i_finish):
         user1 = all_user[i]
         if i % 10 == 0:
-            debug('{} of {} users ({}%)'.format(i, len(all_user), float(i)*100/len(all_user)))
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(i)*100/len(all_user)))
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
@@ -125,11 +136,7 @@ t: time threshold
 d: distance threshold
 n: number of chunks
 """
-def mapping(p, k, d, t, BACKUP, working_folder, i_start=0, i_finish=-1):
-    ### Initialize dataset
-    users, friends, venues = init(p, k)
-    ### Sorting users' checkins based on their timestamp, ascending ordering
-    uids = sort_user_checkins(users)
+def mapping(users, p, k, d, t, BACKUP, working_folder, i_start=0, i_finish=-1):
     ### Co-location
     co_occur(users, p, k, t, d, BACKUP, i_start, i_finish, working_folder)
 
@@ -203,10 +210,11 @@ def extraction(p, k, d, t, working_folder):
     stat_td = {}    # duration
     stat_ts = {}    # stability
     u_xy = {}       # u_xy = Average meeting time = delta_xy / |Theta_xy|
-    ws = {}         # stability weight
+    week_num = {}   # Save a list of week number of co-occurrence between users
     ### Extract data from file
     fname = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
     debug(fname)
+    weeks = {}
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -217,6 +225,7 @@ def extraction(p, k, d, t, working_folder):
             u2 = split[1]
             vid = split[2]
             t_diff = int(split[3])
+            t_avg = float(split[len(split)-1])
             friend = Friend(u1, u2)
             ### Extract frequency
             found = stat_f.get(friend)
@@ -234,7 +243,6 @@ def extraction(p, k, d, t, working_folder):
             found[vid] = found_vid
             stat_l[friend] = found
             ### Extract duration
-            friend = Friend(u1, u2)
             found = stat_t.get(friend)
             if found is None:
                 found = []
@@ -248,6 +256,21 @@ def extraction(p, k, d, t, working_folder):
             stat_lv[friend] = found
             if vid not in stat_lv:
                 stat_ld[friend] = found
+            found = week_num.get(friend)
+            if found is None:
+                found = []
+            tanggal = date.fromtimestamp(t_avg)
+            tahun = tanggal.year - 2009
+            week = tanggal.isocalendar()[1] + (tahun * 53)
+            found.append(week)
+            week_num[friend] = found
+    #         count = weeks.get(tanggal)
+    #         if count is None:
+    #             count = 0
+    #         count += 1
+    #         weeks[tanggal] = count
+    # for w in sorted(weeks, key=weeks.get, reverse=True):
+    #     debug('{}\t{}'.format(w, weeks[w]), clean=True)
     ### Extract diversity
     for friend, dictionary in stat_l.items():
         found = stat_d.get(friend)
@@ -297,8 +320,17 @@ def extraction(p, k, d, t, working_folder):
         rho[friend] = sqrt(sigma_z[friend] / len(stat_ld[friend]))
         if u_xy.get(friend) is None:
             continue
-        ws[friend] = exp(-1*(u_xy[friend]+rho[friend]))
-        debug(ws[friend], clean=True)
+        stat_ts[friend] = exp(-1*(u_xy[friend]+rho[friend]))
+        # debug(stat_ts[friend], clean=True)
+
+    # for friend, weeks in week_num.items():
+    #     debug('{}:{}'.format(friend, weeks))
+
+    ### normalization of each weight
+    # max_f = max(stat_f.values())
+    # for friend, frequency in stat_f.items():
+    #     stat_f[friend] = float(frequency) / max_f
+
     ### Debug
     ### Frequency
     # for friend, frequency in stat_f.items():
@@ -310,14 +342,78 @@ def extraction(p, k, d, t, working_folder):
     # for friend, duration in stat_td.items():
     #     debug('{}\t{}'.format(friend, duration))
     ### Stability
-    # for friend, weight in ws.items():
+    # for friend, weight in stat_ts.items():
     #     debug('{},{}'.format(friend, weight), clean=True)
 
-def evaluation(p, k, d, t, working_folder):
-    pass
+    debug('Finished extracting co-occurrence features')
 
-def test(p, k, d, t, i):
-    print(p, k, d, t, i)
+    return stat_f, stat_d, stat_td, stat_ts
+
+def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
+    summaries = {}
+
+    ### Frequency
+    max_val = max(stat_f.values())
+    for friend, data in stat_f.items():
+        stat_f[friend] = float(data) / max_val
+    for friend, data in stat_f.items():
+        found = summaries.get(friend)
+        if found is None:
+            found = Evaluation(friend.u1, friend.u2)
+        found.frequency = data
+        summaries[friend] = found
+
+    ### Diversity
+    max_val = 0
+    for friend, data in stat_d.items():
+        found = summaries.get(friend)
+        if found is None:
+            found = Evaluation(friend.u1, friend.u2)
+        found.diversity = entropy(data)
+        if found.diversity > max_val:
+            max_val = found.diversity
+        summaries[friend] = found
+    for friend, evaluation in summaries.items():
+        evaluation.diversity = float(evaluation.diversity) / max_val
+
+    ### Duration
+    max_val = max(stat_td.values())
+    for friend, data in stat_td.items():
+        stat_td[friend] = float(data) / max_val
+    for friend, data in stat_td.items():
+        found = summaries.get(friend)
+        if found is None:
+            found = Evaluation(friend.u1, friend.u2)
+        found.duration = data
+        summaries[friend] = found
+
+    ### Stability
+    max_val = max(stat_ts.values())
+    for friend, data in stat_ts.items():
+        stat_ts[friend] = float(data) / max_val
+    for friend, data in stat_ts.items():
+        found = summaries.get(friend)
+        if found is None:
+            found = Evaluation(friend.u1, friend.u2)
+        found.stability = data
+        summaries[friend] = found
+
+    ### Friendship
+    for uid, arr in friends.items():
+        for fid in arr:
+            friend = Friend(uid, fid)
+            found = summaries.get(friend)
+            if found is None:
+                continue
+            found.link = 1
+            summaries[friend] = found
+            # debug(found, clean=True)
+    # for friend, evaluation in summaries.items():
+    #     debug(evaluation, clean=True)
+    write_evaluation(summaries, p, k, t, d)
+
+def testing(p, k, d, t):
+    print(p, k, d, t)
     time.sleep(1)
 
 # Main function
@@ -370,7 +466,11 @@ if __name__ == '__main__':
             debug('Evaluating weekend checkins')
         elif topk == -1:
             debug('Evaluating all checkins')
-        mapping(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, BACKUP, working_folder, i_start, i_finish)
+        ### Initialize dataset
+        users, friends, venues = init(ACTIVE_PROJECT, topk)
+        ### Sorting users' checkins based on their timestamp, ascending ordering
+        uids = sort_user_checkins(users)
+        mapping(users, ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, BACKUP, working_folder, i_start, i_finish)
         # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, working_folder)
         # evaluation(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
     else:
@@ -385,8 +485,14 @@ if __name__ == '__main__':
                     for t in ts:
                         print('p:{}, k:{}, d:{}, t:{}'.format(p, k, d, t))
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                        # mapping(p, k, d, t, BACKUP, working_folder)
+                        dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+                        ### Initialize dataset
+                        users, friends, venues = init(p, k)
+                        ### Sorting users' checkins based on their timestamp, ascending ordering
+                        uids = sort_user_checkins(users)
+                        # mapping(users, p, k, d, t, BACKUP, working_folder)
                         # reducing(p, k, d, t, working_folder)
-                        extraction(p, k, d, t, working_folder)
-                        # evaluation(p, k, d, t)
+                        stat_f, stat_d, stat_td, stat_ts = extraction(p, k, d, t, working_folder)
+                        friend_file = base_folder + FRIEND_FILE
+                        evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
     print("--- Program finished ---")
