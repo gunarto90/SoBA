@@ -10,6 +10,14 @@ from general_utilities import *
 from base import *
 from classes import *
 
+from imblearn.over_sampling import SMOTE
+from imblearn.combine import SMOTEENN
+from imblearn.ensemble import EasyEnsemble
+
+from numpy import genfromtxt
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+
 last_backup_filename = 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'
 co_part_filename = 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'
 co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'
@@ -59,7 +67,22 @@ def cv_score(X, y):
     # print(scores)
     score = scores.mean()
     # print(score)
+    debug('Finished evaluating cross validation scores')
     return score
+
+def sampling(X, y):
+    lists = []
+    lists.append((X, y))
+    ### ovesampling
+    sm = SMOTE(kind='regular')
+    X_smote, y_smote = sm.fit_sample(X, y)
+    lists.append((X_smote, y_smote))
+    ### undersampling
+    sm = SMOTEENN()
+    X_combine, y_combine = sm.fit_sample(X, y)
+    lists.append((X_combine, y_combine))
+    debug('Finished sampling')
+    return lists
 
 """
     <Next step of each co-location comparison>
@@ -427,9 +450,20 @@ def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
     #     debug(evaluation, clean=True)
     write_evaluation(summaries, p, k, t, d)
 
-def testing(p, k, t, d):
-    print(p, k, t, d)
+def testing(p, k, t, d, working_folder):
     filename = working_folder + evaluation_filename.format(p, k, t, d)
+    #create the training & test sets, skipping the header row with [1:]
+    dataset = genfromtxt(filename, delimiter=',')[1:]
+    # print(dataset.shape)
+    ncol = dataset.shape[1]
+    X = dataset[:,0:ncol-2]
+    y = dataset[:,ncol-1]
+    lists = sampling(X, y)
+    scores = []
+    for Xi, yi in lists:
+        score = cv_score(Xi, yi)
+        scores.append(score)
+    debug(scores)
 
 # Main function
 if __name__ == '__main__':
@@ -500,14 +534,17 @@ if __name__ == '__main__':
                     for t in ts:
                         print('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                        dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
-                        ### Initialize dataset
-                        users, friends, venues = init(p, k)
-                        ### Sorting users' checkins based on their timestamp, ascending ordering
-                        uids = sort_user_checkins(users)
+                        # dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+                        # ### Initialize dataset
+                        # users, friends, venues = init(p, k)
+                        # ### Sorting users' checkins based on their timestamp, ascending ordering
+                        # uids = sort_user_checkins(users)
                         # mapping(users, p, k, t, d, BACKUP, working_folder)
                         # reducing(p, k, t, d, working_folder)
-                        stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                        friend_file = base_folder + FRIEND_FILE
-                        evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
+                        ### extracting features
+                        # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
+                        # friend_file = base_folder + FRIEND_FILE
+                        # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
+                        ### testing extracted csv
+                        testing(p, k, t, d, working_folder)
     print("--- Program finished ---")
