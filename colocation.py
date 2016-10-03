@@ -20,7 +20,8 @@ from sklearn.ensemble import RandomForestClassifier
 
 last_backup_filename = 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'
 co_part_filename = 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'
-co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'
+co_raw_part_filename = 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'
+co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}.csv'
 co_location_filename = 'co_location_p{}_k{}_t{}_d{}.csv'
 evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
 
@@ -162,7 +163,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
     print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
     write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
 
-    filename = working_folder + co_raw_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
+    filename = working_folder + co_raw_part_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
