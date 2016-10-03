@@ -10,13 +10,19 @@ from general_utilities import *
 from base import *
 from classes import *
 
+last_backup_filename = 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'
+co_part_filename = 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'
+co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'
+co_location_filename = 'co_location_p{}_k{}_t{}_d{}.csv'
+evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
+
 def write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder):
     ### Write to file
     texts = []
     texts.append('uid1,uid2,vid,frequency')
     for ss, frequency in co_location.items():
         texts.append('{},{}'.format(ss, frequency))
-    filename = working_folder + 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish)
+    filename = working_folder + co_part_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
@@ -25,7 +31,7 @@ def write_evaluation(summaries, p, k, t, d):
     texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
     for friend, evaluation in summaries.items():
         texts.append(str(evaluation))
-    filename = working_folder + 'evaluation_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    filename = working_folder + evaluation_filename.format(p, k, t, d)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
     debug('Finished writing to {}'.format(filename))
@@ -45,6 +51,15 @@ def haversine(lat1, lon1, lat2, lon2):
     km = 6367 * c
     distance = km * 1000
     return distance
+
+def cv_score(X, y):
+    ### using 2 cores (n_jobs = 2)
+    clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=2)
+    scores = cross_val_score(clf, X, y, cv=5)
+    # print(scores)
+    score = scores.mean()
+    # print(score)
+    return score
 
 """
     <Next step of each co-location comparison>
@@ -82,7 +97,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
-                with open(working_folder + 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish, ), 'w') as fi:
+                with open(working_folder + last_backup_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish, ), 'w') as fi:
                     fi.write(str(i))
                 write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
         for j in range(i+1, i_finish):
@@ -124,7 +139,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
     print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
     write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
 
-    filename = working_folder + 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'.format(p, k, t_threshold, d_threshold, i_start, i_finish)
+    filename = working_folder + co_raw_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
 
@@ -175,7 +190,7 @@ def reducing(p, k, t, d, working_folder):
                                 get = 0
                             f = f + get
                             data[_id] = f
-    output = 'co_location_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    output = co_location_filename.format(p, k, t, d)
     texts = []
     for _id, f in data.items():
         texts.append('{},{}'.format(_id, f))
@@ -195,7 +210,7 @@ def reducing(p, k, t, d, working_folder):
                         if line.startswith('uid'):
                             continue
                         texts.append(line.strip())
-    output = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    output = co_raw_filename.format(p, k, t, d)
     remove_file_if_exists(working_folder + output)
     write_to_file_buffered(working_folder + output, texts)
     debug('Finished writing all raw co location data at {}'.format(output))
@@ -212,7 +227,7 @@ def extraction(p, k, t, d, working_folder):
     u_xy = {}       # u_xy = Average meeting time = delta_xy / |Theta_xy|
     week_num = {}   # Save a list of week number of co-occurrence between users
     ### Extract data from file
-    fname = 'co_raw_p{}_k{}_t{}_d{}.csv'.format(p, k, t, d)
+    fname = co_raw_filename.format(p, k, t, d)
     debug(fname)
     weeks = {}
     with open(working_folder + fname, 'r') as fr:
@@ -414,7 +429,7 @@ def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
 
 def testing(p, k, t, d):
     print(p, k, t, d)
-    time.sleep(1)
+    filename = working_folder + evaluation_filename.format(p, k, t, d)
 
 # Main function
 if __name__ == '__main__':
