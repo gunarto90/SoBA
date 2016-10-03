@@ -136,7 +136,7 @@ t: time threshold
 d: distance threshold
 n: number of chunks
 """
-def mapping(users, p, k, d, t, BACKUP, working_folder, i_start=0, i_finish=-1):
+def mapping(users, p, k, t, d, BACKUP, working_folder, i_start=0, i_finish=-1):
     ### Co-location
     co_occur(users, p, k, t, d, BACKUP, i_start, i_finish, working_folder)
 
@@ -147,7 +147,7 @@ k: top k (-1 all, 0 weekend, others are top k users)
 t: time threshold
 d: distance threshold
 """
-def reducing(p, k, d, t, working_folder):
+def reducing(p, k, t, d, working_folder):
     debug("start reduce processes")
     # pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
     pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
@@ -200,7 +200,7 @@ def reducing(p, k, d, t, working_folder):
     write_to_file_buffered(working_folder + output, texts)
     debug('Finished writing all raw co location data at {}'.format(output))
 
-def extraction(p, k, d, t, working_folder):
+def extraction(p, k, t, d, working_folder):
     stat_f = {}     # frequency
     stat_d = {}     # diversity
     stat_ld = {}    # co-occurrence between user in each venue (distinct)
@@ -412,8 +412,8 @@ def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
     #     debug(evaluation, clean=True)
     write_evaluation(summaries, p, k, t, d)
 
-def testing(p, k, d, t):
-    print(p, k, d, t)
+def testing(p, k, t, d):
+    print(p, k, t, d)
     time.sleep(1)
 
 # Main function
@@ -483,16 +483,16 @@ if __name__ == '__main__':
             for k in ks:
                 for d in ds:
                     for t in ts:
-                        print('p:{}, k:{}, d:{}, t:{}'.format(p, k, d, t))
+                        print('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
                         dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
                         ### Initialize dataset
                         users, friends, venues = init(p, k)
                         ### Sorting users' checkins based on their timestamp, ascending ordering
                         uids = sort_user_checkins(users)
-                        # mapping(users, p, k, d, t, BACKUP, working_folder)
-                        # reducing(p, k, d, t, working_folder)
-                        stat_f, stat_d, stat_td, stat_ts = extraction(p, k, d, t, working_folder)
+                        # mapping(users, p, k, t, d, BACKUP, working_folder)
+                        # reducing(p, k, t, d, working_folder)
+                        stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
                         friend_file = base_folder + FRIEND_FILE
                         evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
     print("--- Program finished ---")
