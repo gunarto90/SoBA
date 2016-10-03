@@ -99,6 +99,7 @@ def init_friendships(users, file=None):
                 continue
             uid = int(split[0])
             fid = int(split[1])
+            friend = Friend(uid, fid)
             if uid in users and fid in users:
                 friend = friends.get(uid)
                 if friend is None:
