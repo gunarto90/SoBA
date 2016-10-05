@@ -6,6 +6,7 @@ class Venue:
         self.lat = _lat
         self.lon = _lon 
         self.count = 0
+        self.user_count = 0
         self.cluster = -1
 
     def set_count(self, count):
@@ -13,6 +14,12 @@ class Venue:
 
     def increase_count(self):
         self.count += 1
+
+    def set_user_count(self, count):
+        self.user_count = count
+
+    def increase_user_count(self):
+        self.user_count += 1
 
     def set_cluster(self, cluster_id):
         self.cluster = cluster_id
