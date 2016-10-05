@@ -3,8 +3,6 @@ from base import *
 from classes import *
 from math import exp
 
-from colocation import cv_score, sampling, haversine
-
 co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}.csv'
 
 ### parameters
@@ -21,16 +19,19 @@ def load_user_personal(pd_filename):
             user_p[(uid, vid)] = density
     return user_p
 
-def user_personal(users, venues, p, k, working_folder, write=True):
-    pd_filename = 'pgt_personal_density_p{}_k{}.csv'.format(p, k)
+def user_personal(users, venues, p, working_folder, write=True):
+    pd_filename = 'pgt_personal_density_p{}.csv'.format(p)
     user_p = {}             ### key: (user_id, loc_id), value: density value (float)
     query_time = time.time()
     counter = 0
+    skip = 0
     for uid, user in users.items():
-        if counter % 100 == 0:
+        if counter % 10 == 0:
             debug('Processing {} of {} users'.format(counter, len(users.items())))
+            # debug('Skipped {} unused venues'.format(skip))
         for vid, venue in venues.items():
             if venue.count < 2:
+                skip += 1
                 continue
             pi_lock = 0.0   ### density of the location
             for checkin in user.checkins:
@@ -45,7 +46,7 @@ def user_personal(users, venues, p, k, working_folder, write=True):
     query_time = time.time()
     for (uid, lid), density in user_p.items():
         texts.append('{},{},{:.9f}'.format(uid, lid, density))
-    debug(texts)
+    # debug(texts)
     if write is True:
         remove_file_if_exists(working_folder + pd_filename)
         write_to_file_buffered(working_folder + pd_filename, texts)
@@ -53,7 +54,7 @@ def user_personal(users, venues, p, k, working_folder, write=True):
         debug('Writing personal density of {0:,} users in {1} seconds'.format(len(users), process_time))
     return user_p
 
-def venue_global(users, venues, p, k, working_folder, write=True):
+def venue_global(users, venues, p, working_folder, write=True):
     pass
 
 def pgt_personal(user_p, users):
@@ -79,5 +80,7 @@ if __name__ == '__main__':
             users, friends, venues = init(p, k)
             uids = sort_user_checkins(users)
             ### extract personal density values
-            user_p = user_personal(users, venues, p, k, working_folder, write=True)
+            user_p = user_personal(users, venues, p, working_folder, write=True)
+            ### extract global mobility entropy
+
     debug('PGT finished')
