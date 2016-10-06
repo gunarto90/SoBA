@@ -131,7 +131,7 @@ def extraction(p, k, t, d, working_folder):
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
-            # user1,user2,vid,t_diff,frequency,time1,time2,t_avg
+            # user1,user2,vid,t_diff,frezquency,time1,time2,t_avg
             if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
                 continue
             u1 = split[0]
@@ -212,10 +212,10 @@ if __name__ == '__main__':
         uids = sort_user_checkins(users)
         ### extract personal density values
         if mode == 1:
-            user_p = user_personal(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+            user_p = user_personal(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
         ### extract global venue entropy
         if mode == 2:
-            venue_g = venue_global(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+            venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
     else:
         ps = [0]
         ks = [0]
