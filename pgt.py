@@ -38,7 +38,7 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
         user = all_user[i]
         uid = user.uid
         if counter % 10 == 0:
-            debug('{} of {} users ({}%)'.format(counter, i_finish, float(counter)*100/(i_finish-i_start)))
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
             # debug('Skipped {} unused venues'.format(skip))
         for vid, venue in venues.items():
             if venue.count < 2:
@@ -51,7 +51,6 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
             if pi_lock > 0.000000001:   ### leave out very small density values to save spaces and computations
                 user_p[(uid, vid)] = pi_lock
         counter += 1
-    all_user.clear()
     process_time = int(time.time() - query_time)
     debug('Extracting personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
     texts = []
@@ -64,7 +63,10 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
         write_to_file_buffered(working_folder + pd_filename, texts)
         process_time = int(time.time() - query_time)
         debug('Writing personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
-    texts.clear()
+    del all_user[:]
+    del all_user
+    del texts[:]
+    del texts
     return user_p
 
 def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_finish=-1):
@@ -84,7 +86,7 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
         user = all_user[i]
         uid = user.uid
         if counter % 10 == 0:
-            debug('{} of {} users ({}%)'.format(counter, i_finish, float(counter)*100/(i_finish-i_start)))
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
         for vid, venue in venues.items():
             pi_lock = 0.0   ### ratio of user visit in the location compared to all population
             u_count = 0     ### count of user visit in the location
@@ -99,15 +101,16 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
                 venue_list[vid] = found
         counter += 1
     for vid, list_p in venue_list.items():
-        venue_g[vid] = (entropy(list_p), len(list_p))
+        ent  = entropy(list_p)
+        freq = len(list_p)
+        venue_g[vid] = (ent, freq)
     process_time = int(time.time() - query_time)
     debug('Extracting venue global of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
     venue_list.clear()
-    all_user.clear()
     texts = []
     query_time = time.time()
-    for vid, (entropy, frequency) in venue_g.items():
-        texts.append('{},{:.9f},{:.9f}'.format(vid, entropy, frequency))
+    for vid, (ent, freq) in venue_g.items():
+        texts.append('{},{:.9f},{}'.format(vid, ent, freq))
     debug(texts)
     debug(len(texts))
     debug(len(venues))
@@ -116,7 +119,10 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
         write_to_file_buffered(working_folder + pd_filename, texts)
         process_time = int(time.time() - query_time)
         debug('Writing personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
-    texts.clear()
+    del all_user[:]
+    del all_user
+    del texts[:]
+    del texts
     return venue_g
 
 def pgt_personal(user_p, users):
@@ -193,7 +199,7 @@ if __name__ == '__main__':
                 uids = sort_user_checkins(users)
                 ### extract personal density values
                 if mode == 1:
-                    user_p = user_personal(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+                    user_p = user_personal(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
                 ### extract global venue entropy
                 if mode == 2:
                     venue_g = venue_global(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
