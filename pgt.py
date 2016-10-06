@@ -49,6 +49,7 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
             if pi_lock > 0.000000001:   ### leave out very small density values to save spaces and computations
                 user_p[(uid, vid)] = pi_lock
         counter += 1
+    all_user.clear()
     process_time = int(time.time() - query_time)
     debug('Extracting personal density of {0:,} users in {1} seconds'.format(len(users), process_time))
     texts = []
@@ -63,8 +64,39 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
         debug('Writing personal density of {0:,} users in {1} seconds'.format(len(users), process_time))
     return user_p
 
-def venue_global(users, venues, p, working_folder, write=True):
-    pass
+def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_finish=-1):
+    vg_filename = 'pgt_venue_global_p{}_s{}_f{}.csv'.format(p, i_start, i_finish)
+    venue_list = {}          ### temp for storing probability of visit
+    venue_g = {}             ### key: (loc_id), value: entropy value (float)
+    counter = 0
+    all_user = []
+    query_time = time.time()
+    for uid1, user in users.items():
+        all_user.append(user)
+    if i_finish == -1:
+        i_finish = len(all_user)
+    for i in range(i_start, i_finish):
+        user = all_user[i]
+        uid = user.uid
+        if counter % 10 == 0:
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
+        for vid, venue in venues.items():
+            pi_lock = 0.0   ### ratio of user visit in the location compared to all population
+            u_count = 0     ### count of user visit in the location
+            for checkin in user.checkins:
+                if checkin.vid == vid:
+                    u_count += 1
+            if u_count > 0:
+                found = venue_list.get(vid)
+                if found is None:
+                    found = []
+                found.append(float(u_count)/venue.count)
+                venue_list[vid] = found
+    for vid, list_p in venue_list.items():
+        venue_g[vid] = entropy(list_p)
+    venue_list.clear()
+    all_user.clear()
+    return venue_g
 
 def pgt_personal(user_p, users):
     pass
@@ -81,12 +113,21 @@ if __name__ == '__main__':
     k = 0
     i_start = 0
     i_finish = -1
+    """
+    mode 0: run all factor using files (for personal data and global data)
+    mode 1: extract personal data
+    mode 2: extract global data
+    mode 3: run personal factor evaluation on the co-occurrence
+    mode 4: run global factor evaluation on the co-occurrence
+    mode 5: run temporal factor evaluation on the co-occurrence
+    """
+    mode = 0
 
     debug('PGT start')
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish"])
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:m:",["project=","topk=","start=","finish=","mode="])
     except getopt.GetoptError:
-        err_msg = 'colocation.py -p <0 gowalla / 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
+        err_msg = 'pgt.py -m MODE -p <0 gowalla / 1 brightkite> -k <top k users> -s <start position>'
         debug(err_msg, 'opt error')
         sys.exit(2)
     if len(opts) > 0:
@@ -99,6 +140,8 @@ if __name__ == '__main__':
                 i_start = int(arg)
             elif opt in ("-f", "--finish"):
                 i_finish = int(arg)
+            elif opt in ("-m", "--mode"):
+                mode = int(arg)
         ### Initialize dataset
         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
         debug('Selected project: {}'.format(dataset[p]))
@@ -114,7 +157,10 @@ if __name__ == '__main__':
         ### Sorting users' checkins based on their timestamp, ascending ordering
         uids = sort_user_checkins(users)
         ### extract personal density values
-        user_p = user_personal(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+        if mode == 1:
+            user_p = user_personal(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+        if mode == 2:
+            venue_g = venue_global(users, venues, p, working_folder, write=True, i_start=i_start, i_finish=i_finish)
     else:
         ps = [0]
         ks = [0]
