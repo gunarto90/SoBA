@@ -21,9 +21,9 @@ def load_user_personal(pd_filename):
             user_p[(uid, vid)] = density
     return user_p
 
-def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_finish=-1):
+def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting user personal density')
-    pd_filename = 'pgt_personal_density_p{}_s{}_f{}.csv'.format(p, i_start, i_finish)
+    pd_filename = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'.format(p, i_start, i_finish)
     debug(pd_filename)
     user_p = {}             ### key: (user_id, loc_id), value: density value (float)
     query_time = time.time()
@@ -69,9 +69,9 @@ def user_personal(users, venues, p, working_folder, write=True, i_start=0, i_fin
     del texts
     return user_p
 
-def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_finish=-1):
+def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting venue global entropy')
-    vg_filename = 'pgt_venue_global_p{}_s{}_f{}.csv'.format(p, i_start, i_finish)
+    vg_filename = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'.format(p, i_start, i_finish)
     debug(vg_filename)
     venue_list = {}          ### temp for storing probability of visit
     venue_g = {}             ### key: (loc_id), value: entropy value (float)
@@ -128,6 +128,18 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
 def extraction(p, k, t, d, working_folder):
     fname = co_raw_filename.format(p, k, t, d)
     debug(fname)
+    with open(working_folder + fname, 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            # user1,user2,vid,t_diff,frequency,time1,time2,t_avg
+            if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
+                continue
+            u1 = split[0]
+            u2 = split[1]
+            vid = split[2]
+            t_diff = int(split[3])
+            t_avg = float(split[len(split)-1])
+            friend = Friend(u1, u2)
 
 def pgt_personal(user_p, users):
     pass
@@ -218,10 +230,10 @@ if __name__ == '__main__':
                     uids = sort_user_checkins(users)
                     ### extract personal density values
                     if mode == 1:
-                        user_p = user_personal(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+                        user_p = user_personal(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
                     ### extract global venue entropy
                     if mode == 2:
-                        venue_g = venue_global(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+                        venue_g = venue_global(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
         else:
             ### Perform PGT calculation
             for p in ps:
