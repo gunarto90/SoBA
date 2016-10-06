@@ -111,12 +111,12 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
     query_time = time.time()
     for vid, (ent, freq) in venue_g.items():
         texts.append('{},{:.9f},{}'.format(vid, ent, freq))
-    debug(texts)
-    debug(len(texts))
-    debug(len(venues))
+    # debug(texts)
+    # debug(len(texts))
+    # debug(len(venues))
     if write is True:
-        remove_file_if_exists(working_folder + pd_filename)
-        write_to_file_buffered(working_folder + pd_filename, texts)
+        remove_file_if_exists(working_folder + vg_filename)
+        write_to_file_buffered(working_folder + vg_filename, texts)
         process_time = int(time.time() - query_time)
         debug('Writing personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
     del all_user[:]
@@ -124,6 +124,10 @@ def venue_global(users, venues, p, working_folder, write=True, i_start=0, i_fini
     del texts[:]
     del texts
     return venue_g
+
+def extraction(p, k, t, d, working_folder):
+    fname = co_raw_filename.format(p, k, t, d)
+    debug(fname)
 
 def pgt_personal(user_p, users):
     pass
@@ -140,6 +144,9 @@ if __name__ == '__main__':
     k = 0
     i_start = 0
     i_finish = 100
+
+    CO_DISTANCE = 500
+    CO_TIME = 3600
     """
     mode 0: run all factor using files (for personal data and global data)
     mode 1: extract personal data
@@ -169,6 +176,10 @@ if __name__ == '__main__':
                 i_finish = int(arg)
             elif opt in ("-m", "--mode"):
                 mode = int(arg)
+            elif opt == "--distance":
+                CO_DISTANCE = int(arg)
+            elif opt == "--time":
+                CO_TIME = int(arg)
         ### Initialize dataset
         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
         debug('Selected project: {}'.format(dataset[p]))
@@ -180,6 +191,10 @@ if __name__ == '__main__':
             debug('Evaluating all checkins')
         debug('Starting position: {}'.format(i_start))
         debug('Finishing position: {}'.format(i_finish))
+
+        debug('Co-location time threshold: {}'.format(CO_TIME))
+        debug('Co-location distance threshold: {}'.format(CO_DISTANCE))
+
         users, friends, venues = init(p, k)
         ### Sorting users' checkins based on their timestamp, ascending ordering
         uids = sort_user_checkins(users)
@@ -192,17 +207,31 @@ if __name__ == '__main__':
     else:
         ps = [0]
         ks = [0]
-        for p in ps:
-            for k in ks:
-                dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                users, friends, venues = init(p, k)
-                uids = sort_user_checkins(users)
-                ### extract personal density values
-                if mode == 1:
-                    user_p = user_personal(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
-                ### extract global venue entropy
-                if mode == 2:
-                    venue_g = venue_global(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
-
-
+        ts = [3600]
+        ds = [0]
+        if mode == 1 or mode == 2:
+            ### Extract required data
+            for p in ps:
+                for k in ks:
+                    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                    users, friends, venues = init(p, k)
+                    uids = sort_user_checkins(users)
+                    ### extract personal density values
+                    if mode == 1:
+                        user_p = user_personal(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+                    ### extract global venue entropy
+                    if mode == 2:
+                        venue_g = venue_global(users, venues, p, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+        else:
+            ### Perform PGT calculation
+            for p in ps:
+                for k in ks:
+                    for t in ts:
+                        for d in ds:
+                            ### extraction
+                            extraction(p, k, t, d, working_folder)
+                            ### personal
+                            ### global
+                            ### temporal
+                            pass
     debug('PGT finished')
