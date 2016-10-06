@@ -23,7 +23,7 @@ def load_user_personal(pd_filename):
 
 def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting user personal density')
-    pd_filename = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'.format(p, i_start, i_finish)
+    pd_filename = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'.format(p, k, i_start, i_finish)
     debug(pd_filename)
     user_p = {}             ### key: (user_id, loc_id), value: density value (float)
     query_time = time.time()
@@ -71,7 +71,7 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
 
 def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting venue global entropy')
-    vg_filename = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'.format(p, i_start, i_finish)
+    vg_filename = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'.format(p, k, i_start, i_finish)
     debug(vg_filename)
     venue_list = {}          ### temp for storing probability of visit
     venue_g = {}             ### key: (loc_id), value: entropy value (float)
