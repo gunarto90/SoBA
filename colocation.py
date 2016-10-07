@@ -5,7 +5,9 @@ import sys
 import getopt
 import operator
 
-from math import radians, cos, sin, asin, sqrt, pow, exp
+from joblib import Parallel, delayed
+
+from math import sqrt, pow, exp
 from general_utilities import *
 from base import *
 from classes import *
@@ -44,22 +46,6 @@ def write_evaluation(summaries, p, k, t, d):
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
     debug('Finished writing to {}'.format(filename))
-
-def haversine(lat1, lon1, lat2, lon2):
-    """
-    Calculate the great circle distance between two points 
-    on the earth (specified in decimal degrees)
-    """
-    # convert decimal degrees to radians 
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    # haversine formula 
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    km = 6367 * c
-    distance = km * 1000
-    return distance
 
 def cv_score(X, y):
     ### using 2 cores (n_jobs = 2)
@@ -109,15 +95,15 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
     all_user = []
     for uid1, user in users.items():
         all_user.append(user)
-    count = 0
+    counter = 0
     texts = []
     texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg')
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
         user1 = all_user[i]
-        if i % 10 == 0:
-            debug('{} of {} users ({}%)'.format(i, i_finish, float(i)*100/len(all_user)))
+        if i % 100 == 0:
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
         if BACKUP > 0:
             if i > i_start and i % BACKUP == 0:
                 ### Save current progress
@@ -131,7 +117,6 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
             ### No overlapping checkins
             if user1.earliest > user2.latest or user2.earliest > user1.latest:
                 continue
-            count += 1
             # debug(i,j,len(user1.checkins),len(user2.checkins))
             ic1 = 0
             ic2 = 0
@@ -159,6 +144,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
                 co += 1
                 co_location[ss] = co
                 ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
+        counter += 1
     process_time = int(time.time() - query_time)
     print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
     write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
@@ -317,7 +303,7 @@ def extraction(p, k, t, d, working_folder):
             found = []            
         for vid, x in dictionary.items():
             found.append(x)
-        stat_d[friend] = found    
+        stat_d[friend] = found
     ### Extract duration
     duration = 0
     max_duration = 0
@@ -472,10 +458,16 @@ if __name__ == '__main__':
     topk = 0
     i_start = 0
     i_finish = -1
-    BACKUP = 1000
+    BACKUP = 0
     CO_DISTANCE = 500
-    CO_TIME = 3600  
-    print("--- Program  started ---")
+    CO_TIME = 3600
+    starts = {}
+    finish = {}
+    starts[0] = [0, 10001, 30001, 55001]
+    finish[0] = [10000, 30000, 55000, -1]
+    starts[1] = [0, 3001, 8001, 15001, 30001]
+    finish[1] = [3000, 8000, 15000, 30000, -1]
+    debug("--- Co-occurrence generation started ---")
     try:
         opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish","backup=","distance=","time="])
     except getopt.GetoptError:
@@ -520,26 +512,32 @@ if __name__ == '__main__':
         users, friends, venues = init(ACTIVE_PROJECT, topk)
         ### Sorting users' checkins based on their timestamp, ascending ordering
         uids = sort_user_checkins(users)
-        mapping(users, ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, BACKUP, working_folder, i_start, i_finish)
+        ss =starts.get(ACTIVE_PROJECT)
+        ff = finish.get(ACTIVE_PROJECT)
+        Parallel(n_jobs=len(ss))(delayed(mapping)(users, ACTIVE_PROJECT, topk, CO_TIME, CO_DISTANCE, BACKUP, working_folder, ss[i], ff[i]) for i in range(len(ss)))
+        # mapping(users, ACTIVE_PROJECT, topk, CO_TIME, CO_DISTANCE, BACKUP, working_folder, i_start, i_finish)
         # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, working_folder)
         # evaluation(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
     else:
-        ps = [0]
+        ps = [1]
         ks = [0]
-        ts = [3600]
-        ds = [0]
+        ts = [1800, 3600]
+        ds = [0, 100, 250]
 
         for p in ps:
             for k in ks:
-                for d in ds:
-                    for t in ts:
-                        print('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                for t in ts:
+                    for d in ds:
+                        debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
+                        # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
                         # dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
                         # ### Initialize dataset
-                        # users, friends, venues = init(p, k)
+                        users, friends, venues = init(p, k)
                         # ### Sorting users' checkins based on their timestamp, ascending ordering
-                        # uids = sort_user_checkins(users)
+                        uids = sort_user_checkins(users)
+                        ss =starts.get(p)
+                        ff = finish.get(p)
+                        Parallel(n_jobs=len(ss))(delayed(mapping)(users, p, k, t, d, BACKUP, working_folder, ss[i], ff[i]) for i in range(len(ss)))
                         # mapping(users, p, k, t, d, BACKUP, working_folder)
                         # reducing(p, k, t, d, working_folder)
                         ### extracting features
@@ -547,5 +545,5 @@ if __name__ == '__main__':
                         # friend_file = base_folder + FRIEND_FILE
                         # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
                         ### testing extracted csv
-                        testing(p, k, t, d, working_folder)
-    print("--- Program finished ---")
+                        # testing(p, k, t, d, working_folder)
+    debug("--- Co-occurrence generation finished ---")
