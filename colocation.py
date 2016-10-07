@@ -98,6 +98,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
     counter = 0
     texts = []
     texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg')
+    # texts.append('user1,user2,lat,lon,t_diff,frequency,time1,time2,t_avg')
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
@@ -123,6 +124,8 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                     continue
                 t_diff = abs(c1.time - c2.time)
                 t_avg = (c1.time + c2.time)/2
+                # lat_avg = (c1.lat + c2.lat)/2
+                # lon_avg = (c1.lon + c2.lon)/2
                 d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
                 if t_diff > t_threshold:
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
@@ -458,16 +461,17 @@ if __name__ == '__main__':
     ### Global parameter for the experiments
     ps = [1]            ### Active project: 0 Gowalla, 1 Brightkite
     ks = [0]            ### Mode for top k users: 0 Weekend, -1 All users
-    ts = [1800, 3600]   ### Time threshold
-    ds = [0, 100, 250]  ### Distance threshold
+    ts = [3600]   ### Time threshold
+    ds = [0]  ### Distance threshold
     debug("--- Co-occurrence generation started ---")
     for p in ps:
         for k in ks:
             for t in ts:
                 for d in ds:
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                    # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                    # dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+                    ### Initialize variables
+                    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                    dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
                     # ### Initialize dataset
                     users, friends, venues = init(p, k)
                     # ### Sorting users' checkins based on their timestamp, ascending ordering
@@ -475,10 +479,9 @@ if __name__ == '__main__':
                     ss =starts.get(p)
                     ff = finish.get(p)
                     Parallel(n_jobs=len(ss))(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
-                    # reducing(p, k, t, d, working_folder)
+                    reducing(p, k, t, d, working_folder)
                     ### extracting features
                     # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                    # friend_file = base_folder + FRIEND_FILE
                     # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
                     ### testing extracted csv
                     # testing(p, k, t, d, working_folder)
