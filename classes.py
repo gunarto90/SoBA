@@ -48,7 +48,7 @@ class Checkin:
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
-        return self.u1 == other.u1 and self.u2 == other.u2
+        return False
 
     def __ne__(self, other):
         """Define a non-equality test"""
