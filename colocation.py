@@ -12,14 +12,6 @@ from general_utilities import *
 from base import *
 from classes import *
 
-from imblearn.over_sampling import SMOTE
-from imblearn.combine import SMOTEENN
-from imblearn.ensemble import EasyEnsemble
-
-from numpy import genfromtxt
-from sklearn.model_selection import cross_val_score
-from sklearn.ensemble import RandomForestClassifier
-
 last_backup_filename = 'last_i_p{}_k{}_t{}_d{}_s{}_f{}.csv'
 co_part_filename = 'co_location_p{}_k{}_t{}_d{}_s{}_f{}.csv'
 co_raw_part_filename = 'co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv'
@@ -46,30 +38,6 @@ def write_evaluation(summaries, p, k, t, d):
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
     debug('Finished writing to {}'.format(filename))
-
-def cv_score(X, y):
-    ### using 2 cores (n_jobs = 2)
-    clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=2)
-    scores = cross_val_score(clf, X, y, cv=5)
-    # print(scores)
-    score = scores.mean()
-    # print(score)
-    debug('Finished evaluating cross validation scores')
-    return score
-
-def sampling(X, y):
-    lists = []
-    lists.append((X, y))
-    ### ovesampling
-    sm = SMOTE(kind='regular')
-    X_smote, y_smote = sm.fit_sample(X, y)
-    lists.append((X_smote, y_smote))
-    ### undersampling
-    sm = SMOTEENN()
-    X_combine, y_combine = sm.fit_sample(X, y)
-    lists.append((X_combine, y_combine))
-    debug('Finished sampling')
-    return lists
 
 """
     <Next step of each co-location comparison>
@@ -204,9 +172,10 @@ def reducing(p, k, t, d, working_folder):
     remove_file_if_exists(working_folder + output)
     write_to_file_buffered(working_folder + output, texts)
     debug('Finished writing all co location summaries at {}'.format(output))
+    del texts[:]
+    data.clear()
 
     ### Extract raw co-occurrence data
-    texts.clear()
     pattern = re.compile('(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
     for file in os.listdir(working_folder):
         if file.endswith(".csv"):
@@ -221,6 +190,8 @@ def reducing(p, k, t, d, working_folder):
     remove_file_if_exists(working_folder + output)
     write_to_file_buffered(working_folder + output, texts)
     debug('Finished writing all raw co location data at {}'.format(output))
+    del texts[:]
+    del texts
 
 def extraction(p, k, t, d, working_folder):
     stat_f = {}     # frequency
@@ -434,21 +405,6 @@ def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
     #     debug(evaluation, clean=True)
     write_evaluation(summaries, p, k, t, d)
 
-def testing(p, k, t, d, working_folder):
-    filename = working_folder + evaluation_filename.format(p, k, t, d)
-    #create the training & test sets, skipping the header row with [1:]
-    dataset = genfromtxt(filename, delimiter=',')[1:]
-    # print(dataset.shape)
-    ncol = dataset.shape[1]
-    X = dataset[:,0:ncol-2]
-    y = dataset[:,ncol-1]
-    lists = sampling(X, y)
-    scores = []
-    for Xi, yi in lists:
-        score = cv_score(Xi, yi)
-        scores.append(score)
-    debug(scores)
-
 # Main function
 if __name__ == '__main__':
     ### For parallelization
@@ -459,10 +415,39 @@ if __name__ == '__main__':
     starts[1] = [0, 3001, 8001, 15001, 30001]
     finish[1] = [3000, 8000, 15000, 30000, -1]
     ### Global parameter for the experiments
-    ps = [1]            ### Active project: 0 Gowalla, 1 Brightkite
-    ks = [0]            ### Mode for top k users: 0 Weekend, -1 All users
-    ts = [3600]   ### Time threshold
-    ds = [0]  ### Distance threshold
+    ps = []     ### Active project: 0 Gowalla, 1 Brightkite
+    ks = []     ### Mode for top k users: 0 Weekend, -1 All users
+    ts = []     ### Time threshold
+    ds = []     ### Distance threshold
+    ### project to be included
+    # ps.append(0)
+    ps.append(1)
+    ### mode to be included
+    ks.append(0)
+    # ks.append(-1)
+    ### time threshold to be included
+    HOUR  = 3600
+    DAY   = 24 * HOUR
+    WEEK  = 7 * DAY
+    MONTH = 30 * DAY
+    # ts.append(int(0.5 * HOUR))
+    ts.append(1 * HOUR)
+    # ts.append(int(1.5 * HOUR))
+    # ts.append(2 * HOUR)
+    # ts.append(1 * DAY)
+    # ts.append(2 * DAY)
+    # ts.append(3 * DAY)
+    # ts.append(1 * WEEK)
+    # ts.append(2 * WEEK)
+    # ts.append(1 * MONTH)
+    # ts.append(2 * MONTH)
+    ### distance threshold to be included
+    ds.append(0)
+    # ds.append(100)
+    # ds.append(250)
+    # ds.append(500)
+    # ds.append(750)
+    # ds.append(1000)
     debug("--- Co-occurrence generation started ---")
     for p in ps:
         for k in ks:
@@ -478,7 +463,12 @@ if __name__ == '__main__':
                     uids = sort_user_checkins(users)
                     ss =starts.get(p)
                     ff = finish.get(p)
-                    Parallel(n_jobs=len(ss))(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
+                    n_core = 1
+                    # n_core = 2
+                    # n_core = 4
+                    # n_core = len(ss)
+                    debug('Number of core: {}'.format(n_core))
+                    Parallel(n_jobs=n_core)(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
                     reducing(p, k, t, d, working_folder)
                     ### extracting features
                     # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
