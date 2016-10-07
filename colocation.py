@@ -73,7 +73,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
     for i in range(i_start, i_finish):
         user1 = all_user[i]
         if i % 100 == 0:
-            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
+            debug('{} of {} users ({.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
         for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
