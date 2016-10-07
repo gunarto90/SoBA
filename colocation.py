@@ -28,6 +28,7 @@ def write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_fi
     filename = working_folder + co_part_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
+    debug('Finished writing co_locations to {}'.format(filename), out_file=False)
 
 def write_evaluation(summaries, p, k, t, d):
     texts = []
@@ -37,7 +38,7 @@ def write_evaluation(summaries, p, k, t, d):
     filename = working_folder + evaluation_filename.format(p, k, t, d)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
-    debug('Finished writing to {}'.format(filename))
+    debug('Finished writing evaluation to {}'.format(filename), out_file=False)
 
 """
     <Next step of each co-location comparison>
@@ -72,7 +73,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
     for i in range(i_start, i_finish):
         user1 = all_user[i]
         if i % 100 == 0:
-            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
+            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
         for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
@@ -111,7 +112,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                 ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
         counter += 1
     process_time = int(time.time() - query_time)
-    print('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
+    debug('Co-occurrence calculation of {0:,} users in {1} seconds'.format(len(users), process_time))
     write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
 
     filename = working_folder + co_raw_part_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
@@ -138,7 +139,7 @@ t: time threshold
 d: distance threshold
 """
 def reducing(p, k, t, d, working_folder):
-    debug("start reduce processes")
+    debug("start reduce processes", out_file=False)
     # pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
     pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
     data = {}
@@ -171,7 +172,7 @@ def reducing(p, k, t, d, working_folder):
         texts.append('{},{}'.format(_id, f))
     remove_file_if_exists(working_folder + output)
     write_to_file_buffered(working_folder + output, texts)
-    debug('Finished writing all co location summaries at {}'.format(output))
+    debug('Finished writing all co location summaries at {}'.format(output), out_file=False)
     del texts[:]
     data.clear()
 
@@ -189,7 +190,7 @@ def reducing(p, k, t, d, working_folder):
     output = co_raw_filename.format(p, k, t, d)
     remove_file_if_exists(working_folder + output)
     write_to_file_buffered(working_folder + output, texts)
-    debug('Finished writing all raw co location data at {}'.format(output))
+    debug('Finished writing all raw co location data at {}'.format(output), out_file=False)
     del texts[:]
     del texts
 
@@ -338,7 +339,7 @@ def extraction(p, k, t, d, working_folder):
     # for friend, weight in stat_ts.items():
     #     debug('{},{}'.format(friend, weight), clean=True)
 
-    debug('Finished extracting co-occurrence features')
+    debug('Finished extracting co-occurrence features', out_file=False)
 
     return stat_f, stat_d, stat_td, stat_ts
 
