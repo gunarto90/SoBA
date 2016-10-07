@@ -51,32 +51,27 @@ def write_to_file_buffered(filename, text_list, append=True):
     if temp_str != "":
         write_to_file(filename, temp_str, append, add_linefeed=False)
 
-def debug(message, callerid=None, clean=False):
+def debug(message, callerid=None, clean=False, out_stdio=True, out_file=True):
     make_sure_path_exists('./log')
     debug_filename = 'log/log_{}.txt'.format(date.today())
     if IS_DEBUG == False:
         return
+    text = ''
     if clean is False:
         if callerid is None:
             text = '[DEBUG] [{1}] {0}'.format(message, datetime.now())
-            print(text)
-            write_to_file(debug_filename, text)
-            return text
         else :
             text = '[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now())
-            print(text)
-            write_to_file(debug_filename, text)
-            return text
     else:
         if callerid is None:
-            print('{0}'.format(message))
-            write_to_file(debug_filename, message)
-            return message
+            text = message
         else :
             text = '{0} <Caller: {1}>'.format(message, callerid)
-            print(text)
-            write_to_file(debug_filename, text)
-            return text
+    if out_stdio is True:
+        print(text)
+    if out_file is True:
+        write_to_file(debug_filename, text)
+    return text
 
 def entropy(data):
     total = 0.0
