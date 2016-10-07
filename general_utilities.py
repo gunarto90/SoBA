@@ -1,7 +1,9 @@
 import os
 import math
 from datetime import datetime
+from datetime import date
 from pympler import asizeof
+from math import radians, cos, sin, asin, sqrt, pow, exp
 
 IS_DEBUG = True
 
@@ -50,18 +52,31 @@ def write_to_file_buffered(filename, text_list, append=True):
         write_to_file(filename, temp_str, append, add_linefeed=False)
 
 def debug(message, callerid=None, clean=False):
+    make_sure_path_exists('./log')
+    debug_filename = 'log/log_{}.txt'.format(date.today())
     if IS_DEBUG == False:
         return
     if clean is False:
         if callerid is None:
-            print('[DEBUG] [{1}] {0}'.format(message, datetime.now()))
+            text = '[DEBUG] [{1}] {0}'.format(message, datetime.now())
+            print(text)
+            write_to_file(debug_filename, text)
+            return text
         else :
-            print('[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now()))
+            text = '[DEBUG] [{2}] <Caller: {1}> {0}'.format(message, callerid, datetime.now())
+            print(text)
+            write_to_file(debug_filename, text)
+            return text
     else:
         if callerid is None:
             print('{0}'.format(message))
+            write_to_file(debug_filename, message)
+            return message
         else :
-            print('{0} <Caller: {1}>'.format(message, callerid))
+            text = '{0} <Caller: {1}>'.format(message, callerid)
+            print(text)
+            write_to_file(debug_filename, text)
+            return text
 
 def entropy(data):
     total = 0.0
@@ -72,3 +87,19 @@ def entropy(data):
         pi = float(item)/total
         ent -= pi * math.log(pi)
     return ent
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians 
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # haversine formula 
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    km = 6367 * c
+    distance = km * 1000
+    return distance
