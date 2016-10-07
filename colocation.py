@@ -89,7 +89,7 @@ def next_co_param(c1, c2, ic1, ic2):
     Time (in seconds)
     Distance (in meters)
 """
-def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, working_folder):
+def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder):
     query_time = time.time()
     co_location = {}
     all_user = []
@@ -104,12 +104,6 @@ def co_occur(users, p, k, t_threshold, d_threshold, BACKUP, i_start, i_finish, w
         user1 = all_user[i]
         if i % 100 == 0:
             debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
-        if BACKUP > 0:
-            if i > i_start and i % BACKUP == 0:
-                ### Save current progress
-                with open(working_folder + last_backup_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish, ), 'w') as fi:
-                    fi.write(str(i))
-                write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
         for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
@@ -161,9 +155,9 @@ t: time threshold
 d: distance threshold
 n: number of chunks
 """
-def mapping(users, p, k, t, d, BACKUP, working_folder, i_start=0, i_finish=-1):
+def mapping(users, p, k, t, d, working_folder, i_start=0, i_finish=-1):
     ### Co-location
-    co_occur(users, p, k, t, d, BACKUP, i_start, i_finish, working_folder)
+    co_occur(users, p, k, t, d, i_start, i_finish, working_folder)
 
 """
 Reduce function
@@ -454,96 +448,38 @@ def testing(p, k, t, d, working_folder):
 
 # Main function
 if __name__ == '__main__':
-    ACTIVE_PROJECT = 0
-    topk = 0
-    i_start = 0
-    i_finish = -1
-    BACKUP = 0
-    CO_DISTANCE = 500
-    CO_TIME = 3600
+    ### For parallelization
     starts = {}
     finish = {}
     starts[0] = [0, 10001, 30001, 55001]
     finish[0] = [10000, 30000, 55000, -1]
     starts[1] = [0, 3001, 8001, 15001, 30001]
     finish[1] = [3000, 8000, 15000, 30000, -1]
+    ### Global parameter for the experiments
+    ps = [1]            ### Active project: 0 Gowalla, 1 Brightkite
+    ks = [0]            ### Mode for top k users: 0 Weekend, -1 All users
+    ts = [1800, 3600]   ### Time threshold
+    ds = [0, 100, 250]  ### Distance threshold
     debug("--- Co-occurrence generation started ---")
-    try:
-        opts, args = getopt.getopt(sys.argv[1:],"p:k:s:f:",["project=","topk=","start=","finish","backup=","distance=","time="])
-    except getopt.GetoptError:
-        err_msg = 'colocation.py -p <0 gowalla / 1 brightkite> -k <top k users> -s <start position> [optional] --backup=<every #users to backup> --distance=<co-location distance threshold> --time=<co-location time threshold>'
-        debug(err_msg, 'opt error')
-        sys.exit(2)
-    if len(opts) > 0:
-        for opt, arg in opts:
-            if opt == '-h': 
-                debug(err_msg, 'opt error')
-                sys.exit()
-            elif opt in ("-p", "--project"):
-                ACTIVE_PROJECT = int(arg)
-            elif opt in ("-k", "--topk"):
-                topk = int(arg)
-            elif opt in ("-s", "--start"):
-                i_start = int(arg)
-            elif opt in ("-f", "--finish"):
-                i_finish = int(arg)
-            elif opt == "--backup":
-                BACKUP = int(arg)
-            elif opt == "--distance":
-                CO_DISTANCE = int(arg)
-            elif opt == "--time":
-                CO_TIME = int(arg)
-
-        dataset, base_folder, working_folder, weekend_folder = init_folder(ACTIVE_PROJECT)
-
-        debug('Selected project: {}'.format(dataset[ACTIVE_PROJECT]))
-        debug('Starting position: {}'.format(i_start))
-        debug('Finishing position: {}'.format(i_finish))
-        debug('Backup every {} users'.format(BACKUP))
-        debug('Co-location time threshold: {}'.format(CO_TIME))
-        debug('Co-location distance threshold: {}'.format(CO_DISTANCE))
-        if topk > 0:
-            debug('Top {} users are selected'.format(topk))
-        elif topk == 0:
-            debug('Evaluating weekend checkins')
-        elif topk == -1:
-            debug('Evaluating all checkins')
-        ### Initialize dataset
-        users, friends, venues = init(ACTIVE_PROJECT, topk)
-        ### Sorting users' checkins based on their timestamp, ascending ordering
-        uids = sort_user_checkins(users)
-        ss =starts.get(ACTIVE_PROJECT)
-        ff = finish.get(ACTIVE_PROJECT)
-        Parallel(n_jobs=len(ss))(delayed(mapping)(users, ACTIVE_PROJECT, topk, CO_TIME, CO_DISTANCE, BACKUP, working_folder, ss[i], ff[i]) for i in range(len(ss)))
-        # mapping(users, ACTIVE_PROJECT, topk, CO_TIME, CO_DISTANCE, BACKUP, working_folder, i_start, i_finish)
-        # reducing(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME, working_folder)
-        # evaluation(ACTIVE_PROJECT, topk, CO_DISTANCE, CO_TIME)
-    else:
-        ps = [1]
-        ks = [0]
-        ts = [1800, 3600]
-        ds = [0, 100, 250]
-
-        for p in ps:
-            for k in ks:
-                for t in ts:
-                    for d in ds:
-                        debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                        # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                        # dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
-                        # ### Initialize dataset
-                        users, friends, venues = init(p, k)
-                        # ### Sorting users' checkins based on their timestamp, ascending ordering
-                        uids = sort_user_checkins(users)
-                        ss =starts.get(p)
-                        ff = finish.get(p)
-                        Parallel(n_jobs=len(ss))(delayed(mapping)(users, p, k, t, d, BACKUP, working_folder, ss[i], ff[i]) for i in range(len(ss)))
-                        # mapping(users, p, k, t, d, BACKUP, working_folder)
-                        # reducing(p, k, t, d, working_folder)
-                        ### extracting features
-                        # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                        # friend_file = base_folder + FRIEND_FILE
-                        # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
-                        ### testing extracted csv
-                        # testing(p, k, t, d, working_folder)
+    for p in ps:
+        for k in ks:
+            for t in ts:
+                for d in ds:
+                    debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
+                    # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                    # dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+                    # ### Initialize dataset
+                    users, friends, venues = init(p, k)
+                    # ### Sorting users' checkins based on their timestamp, ascending ordering
+                    uids = sort_user_checkins(users)
+                    ss =starts.get(p)
+                    ff = finish.get(p)
+                    Parallel(n_jobs=len(ss))(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
+                    # reducing(p, k, t, d, working_folder)
+                    ### extracting features
+                    # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
+                    # friend_file = base_folder + FRIEND_FILE
+                    # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
+                    ### testing extracted csv
+                    # testing(p, k, t, d, working_folder)
     debug("--- Co-occurrence generation finished ---")
