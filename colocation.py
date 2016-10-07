@@ -73,7 +73,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
     for i in range(i_start, i_finish):
         user1 = all_user[i]
         if i % 100 == 0:
-            debug('{} of {} users ({.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
         for j in range(i+1, i_finish):
             user2 = all_user[j]
             if user1.uid == user2.uid:
@@ -450,10 +450,10 @@ if __name__ == '__main__':
     # ds.append(750)
     # ds.append(1000)
     debug("--- Co-occurrence generation started ---")
-    for p in ps:
-        for k in ks:
-            for t in ts:
-                for d in ds:
+    for t in ts:
+        for d in ds:
+            for k in ks:
+                for p in ps:
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
                     ### Initialize variables
                     dataset, base_folder, working_folder, weekend_folder = init_folder(p)
@@ -464,10 +464,10 @@ if __name__ == '__main__':
                     uids = sort_user_checkins(users)
                     ss =starts.get(p)
                     ff = finish.get(p)
-                    n_core = 1
+                    # n_core = 1
                     # n_core = 2
                     # n_core = 4
-                    # n_core = len(ss)
+                    n_core = len(ss)
                     debug('Number of core: {}'.format(n_core))
                     Parallel(n_jobs=n_core)(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
                     reducing(p, k, t, d, working_folder)
