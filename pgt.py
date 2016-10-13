@@ -1,9 +1,14 @@
 from general_utilities import *
 from base import *
 from classes import *
+
 from math import exp
+from joblib import Parallel, delayed
+
 import sys
 import getopt
+
+
 
 co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}.csv'
 
@@ -37,8 +42,8 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
     for i in range(i_start, i_finish):
         user = all_user[i]
         uid = user.uid
-        if counter % 10 == 0:
-            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
+        if counter % 1000 == 0:
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal')
             # debug('Skipped {} unused venues'.format(skip))
         for vid, venue in venues.items():
             if venue.count < 2:
@@ -79,17 +84,19 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
     all_user = []
     query_time = time.time()
     for uid1, user in users.items():
-        all_user.append(user)
+        all_user.append(uid1)
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
-        user = all_user[i]
+        user = users[all_user[i]]
         uid = user.uid
-        if counter % 10 == 0:
-            debug('{} of {} users ({}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)))
+        if counter % 1000 == 0:
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Global')
         for vid, venue in venues.items():
             pi_lock = 0.0   ### ratio of user visit in the location compared to all population
             u_count = 0     ### count of user visit in the location
+            if venue.count == 0:
+                continue
             for checkin in user.checkins:
                 if checkin.vid == vid:
                     u_count += 1
@@ -106,7 +113,7 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
         venue_g[vid] = (ent, freq)
     process_time = int(time.time() - query_time)
     debug('Extracting venue global of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
-    venue_list.clear()
+    debug('Extracted venue global : {}'.format(len(venue_g)))
     texts = []
     query_time = time.time()
     for vid, (ent, freq) in venue_g.items():
@@ -119,6 +126,7 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
         write_to_file_buffered(working_folder + vg_filename, texts)
         process_time = int(time.time() - query_time)
         debug('Writing personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
+    venue_list.clear()
     del all_user[:]
     del all_user
     del texts[:]
@@ -152,10 +160,18 @@ def pgt_temporal():
 
 # Main function
 if __name__ == '__main__':
+    ### For parallelization
+    starts = {}
+    finish = {}
+    starts[0] = [0, 10001, 30001, 55001]
+    finish[0] = [10000, 30000, 55000, -1]
+    starts[1] = [0, 3001, 8001, 15001, 30001]
+    finish[1] = [3000, 8000, 15000, 30000, -1]
     p = 0
     k = 0
     i_start = 0
-    i_finish = 100
+    i_finish = -1
+    write = True
 
     CO_DISTANCE = 500
     CO_TIME = 3600
@@ -217,33 +233,48 @@ if __name__ == '__main__':
         if mode == 2:
             venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
     else:
-        ps = [0]
-        ks = [0]
+        modes = [1, 2]
+        ps = [1]
+        ks = [0, -1]
         ts = [3600]
         ds = [0]
-        if mode == 1 or mode == 2:
-            ### Extract required data
-            for p in ps:
-                for k in ks:
-                    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                    users, friends, venues = init(p, k)
-                    uids = sort_user_checkins(users)
-                    ### extract personal density values
-                    if mode == 1:
-                        user_p = user_personal(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
-                    ### extract global venue entropy
-                    if mode == 2:
-                        venue_g = venue_global(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
-        else:
-            ### Perform PGT calculation
-            for p in ps:
-                for k in ks:
-                    for t in ts:
-                        for d in ds:
-                            ### extraction
-                            extraction(p, k, t, d, working_folder)
-                            ### personal
-                            ### global
-                            ### temporal
-                            pass
+        for mode in modes:
+            if mode == 1 or mode == 2:
+                ### Extract required data
+                for p in ps:
+                    for k in ks:
+                        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                        users, friends, venues = init(p, k)
+                        uids = sort_user_checkins(users)
+                        ### Parallelization
+                        ss = starts.get(p)
+                        ff = finish.get(p)
+                        n_core = 1
+                        # n_core = 2
+                        # n_core = 3
+                        # n_core = 4
+                        # n_core = len(ss)
+                        # debug('Number of core: {}'.format(n_core))
+                        ### extract personal density values
+                        if mode == 1:
+                            if n_core == 1:
+                                user_p = user_personal(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+                            else:
+                                # user_p = Parallel(n_jobs=n_core)(delayed(user_personal)(users, venues, p, k, working_folder, write=write, i_start=ss[i], i_finish=ff[i]) for i in range(len(ss)))
+                                pass
+                        ### extract global venue entropy
+                        if mode == 2:
+                            venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+            else:
+                ### Perform PGT calculation
+                for p in ps:
+                    for k in ks:
+                        for t in ts:
+                            for d in ds:
+                                ### extraction
+                                extraction(p, k, t, d, working_folder)
+                                ### personal
+                                ### global
+                                ### temporal
+                                pass
     debug('PGT finished')
