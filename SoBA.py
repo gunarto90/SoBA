@@ -171,7 +171,6 @@ def extraction(p, k, t, d, working_folder):
 
         return stat_f, stat_d, stat_td, stat_ts
     except:
-        debug('{} is not found'.format(working_folder + fname))
         return None, None, None, None
 
 def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
@@ -278,18 +277,19 @@ if __name__ == '__main__':
     ds.append(750)
     # ds.append(1000)
     debug("--- Social inference started ---")
-    for t in ts:
-        for d in ds:
-            for k in ks:
-                for p in ps:
+    for p in ps:
+        for k in ks:
+            debug('p:{}, k:{}'.format(p, k))
+            ### Initialize variables
+            dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+            dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+            # ### Initialize dataset
+            users, friends, venues = init(p, k)
+            # ### Sorting users' checkins based on their timestamp, ascending ordering
+            uids = sort_user_checkins(users)
+            for t in ts:
+                for d in ds:           
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                    ### Initialize variables
-                    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                    dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
-                    # ### Initialize dataset
-                    users, friends, venues = init(p, k)
-                    # ### Sorting users' checkins based on their timestamp, ascending ordering
-                    uids = sort_user_checkins(users)
                     ### Feature extraction
                     stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
                     evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
