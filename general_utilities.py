@@ -14,8 +14,16 @@ def show_object_size(obj, name):
 def make_sure_path_exists(path):
     try:
         os.makedirs(path)
+        return True
     except OSError as exception:
-        pass
+        return False
+
+def is_file_exists(filename):
+    try:
+        with open(filename, 'r'):
+            return True
+    except:
+        return False
 
 def remove_file_if_exists(filename):
     try:
@@ -24,7 +32,7 @@ def remove_file_if_exists(filename):
         pass
 
 def write_to_file(filename, text, append=True, add_linefeed=True):
-    if append:
+    if append is True:
         mode = 'a'
     else:
         mode = 'w'
@@ -33,7 +41,6 @@ def write_to_file(filename, text, append=True, add_linefeed=True):
         linefeed = '\n'
     with open(filename, mode) as fw:
         fw.write(str(text) + linefeed)
-    pass
 
 def write_to_file_buffered(filename, text_list, append=True):
     debug('Writing file: {}'.format(filename))
