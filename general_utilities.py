@@ -36,6 +36,7 @@ def write_to_file(filename, text, append=True, add_linefeed=True):
     pass
 
 def write_to_file_buffered(filename, text_list, append=True):
+    debug('Writing file: {}'.format(filename))
     buffer_size = 10000
     counter = 0
     temp_str = ""
