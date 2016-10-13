@@ -171,6 +171,7 @@ def extraction(p, k, t, d, working_folder):
 
         return stat_f, stat_d, stat_td, stat_ts
     except:
+        debug('File not found: {}'.format(working_folder + fname))
         return None, None, None, None
 
 def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
