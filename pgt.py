@@ -8,9 +8,11 @@ from joblib import Parallel, delayed
 import sys
 import getopt
 
-
-
 co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}.csv'
+pd_format = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'
+vg_format = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'
+pd_file = 'pgt_personal_density_p{}_k{}.csv'
+vg_file = 'pgt_venue_global_p{}_k{}.csv'
 
 ### parameters
 cd = 1              ### distance parameter in personal density function
@@ -28,7 +30,7 @@ def load_user_personal(pd_filename):
 
 def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting user personal density')
-    pd_filename = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'.format(p, k, i_start, i_finish)
+    pd_filename = pd_format.format(p, k, i_start, i_finish)
     debug(pd_filename)
     user_p = {}             ### key: (user_id, loc_id), value: density value (float)
     query_time = time.time()
@@ -76,7 +78,7 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
 
 def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
     debug('Extracting venue global entropy')
-    vg_filename = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'.format(p, k, i_start, i_finish)
+    vg_filename = vg_format.format(p, k, i_start, i_finish)
     debug(vg_filename)
     venue_list = {}          ### temp for storing probability of visit
     venue_g = {}             ### key: (loc_id), value: entropy value (float)
@@ -149,10 +151,10 @@ def extraction(p, k, t, d, working_folder):
             t_avg = float(split[len(split)-1])
             friend = Friend(u1, u2)
 
-def pgt_personal(user_p, users):
+def pgt_personal(users, working_folder, p, k):
     pass
 
-def pgt_global():
+def pgt_global(working_folder, p, k):
     pass
 
 def pgt_temporal():
