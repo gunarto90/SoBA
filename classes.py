@@ -154,11 +154,18 @@ class Evaluation:
         return '{},{},{},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.link)
 
 class Colocation:
+    # Old version
+    # 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg'
+    # New version
+    # 'user1,user2,vid,t_diff,frequency,time1,time2,lat_avg,lon_avg,dist,t_avg'
     def __init__(self, split):
         self.u1 = int(split[0])
         self.u2 = int(split[1])
         self.vid = int(split[2])
         self.t_diff = int(split[3])
+        self.lat = float(split[len(split)-4])
+        self.lon = float(split[len(split)-3])
+        self.dist = float(split[len(split)-2])
         self.t_avg = float(split[len(split)-1])
 
     def __str__(self):

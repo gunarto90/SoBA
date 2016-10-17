@@ -23,6 +23,12 @@ def init_variables():
         VENUE_CLUSTER   = data["filenames"]["venue_cluster"]
     return dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER
 
+def init_config(filename):
+    config = {}
+    with open(filename) as data_file:
+        data = json.load(data_file)
+    return data 
+
 def init_folder(ACTIVE_PROJECT, WEEKEND=False):
     global base_folder, working_folder, weekend_folder
     global CHECKIN_WEEKEND, FRIEND_WEEKEND, USER_WEEKEND, VENUE_WEEKEND
@@ -187,6 +193,7 @@ def sort_user_checkins(users):
 
 def sort_colocation(colocations):
     query_time = time.time()
-    colocations.sort(key=lambda co: co.t_avg, reverse=False)   # sort by co-occurrence time
+    for friend, co in colocations.items():
+        co = sorted(co, key=lambda co: co.t_avg, reverse=False)   # sort by co-occurrence time
     process_time = int(time.time() - query_time)
     print('Sorting {0:,} colocations in {1} seconds'.format(len(colocations), process_time))
