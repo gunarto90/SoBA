@@ -15,7 +15,8 @@ pd_file = 'pgt_personal_density_p{}_k{}.csv'
 vg_file = 'pgt_venue_global_p{}_k{}.csv'
 
 ### parameters
-cd = 1              ### distance parameter in personal density function
+cd = 1.5    ### distance parameter in personal density function [1,3]
+ct = 0.2    ### temporal parameter in temporal dependencies [0.1, 0.3]
 
 def load_user_personal(pd_filename):
     user_p = {}
@@ -37,13 +38,13 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
     counter = 0
     skip = 0
     all_user = []
-    for uid1, user in users.items():
-        all_user.append(user)
+    for uid, user in users.items():
+        all_user.append(uid)
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
-        user = all_user[i]
-        uid = user.uid
+        uid = all_user[i]
+        user = users.get(uid)
         if counter % 1000 == 0:
             debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal', out_file=True, out_stdio=False)
             # debug('Skipped {} unused venues'.format(skip))
@@ -85,13 +86,13 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
     counter = 0
     all_user = []
     query_time = time.time()
-    for uid1, user in users.items():
-        all_user.append(uid1)
+    for uid, user in users.items():
+        all_user.append(uid)
     if i_finish == -1:
         i_finish = len(all_user)
     for i in range(i_start, i_finish):
-        user = users[all_user[i]]
-        uid = user.uid
+        uid = all_user[i]
+        user = users.get(uid)
         if counter % 1000 == 0:
             debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Global', out_file=True, out_stdio=False)
         for vid, venue in venues.items():
@@ -144,52 +145,93 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     co_g = {}   ### Global
     co_t = {}   ### Temporal
 
-    counter = 0
     query_time = time.time()
+    colocations = []
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
             # user1,user2,vid,t_diff,frezquency,time1,time2,t_avg
             if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
                 continue
-            u1 = int(split[0])
-            u2 = int(split[1])
-            vid = int(split[2])
-            t_diff = int(split[3])
-            t_avg = float(split[len(split)-1])
-            friend = Friend(u1, u2)
-            ### Frequency
-            found = co_f.get(friend)
-            if found is None:
-                found = 0
-            co_f[friend] = found + 1
-            ### Personal
-            if p_density is not None:
-                w1 = p_density.get((u1, vid))
-                w2 = p_density.get((u2, vid))
-                if w1 is not None and w2 is not None:
-                    wp = -log(w1 * w2)
-                    found = co_p.get(friend)
-                    if found is not None:
-                        wp = max(wp, found)
-                    co_p[friend] = wp
-                else:
-                    # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
-                    debug('{},{},{}'.format(u1, u2, vid), clean=True)
-                    pass
-            ### Global
-            if g_entropy is not None:
-                wg = co_g.get(vid)
-                found = g_entropy.get(friend)
+            co = Colocation(split)
+            colocations.append(co)
+    sort_colocation(colocations)
+    counter = 0
+    prev_co = {}
+    for co in colocations:
+        u1 = co.u1
+        u2 = co.u2
+        vid = co.vid
+        t_diff = co.t_diff
+        t_avg = co.t_avg
+        friend = Friend(u1, u2)
+        ### Frequency
+        found = co_f.get(friend)
+        if found is None:
+            found = 0
+        co_f[friend] = found + 1
+        ### Personal
+        if p_density is not None:
+            w1 = p_density.get((u1, vid))
+            w2 = p_density.get((u2, vid))
+            if w1 is not None and w2 is not None:
+                wp = -log(w1 * w2)
+                found = co_p.get(friend)
                 if found is not None:
-                    wg += found[0]  # entropy
-                co_g[friend] = wg
-            counter += 1
+                    wp = max(wp, found)
+                co_p[co] = wp
+            else:
+                # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
+                # debug('{},{},{}'.format(u1, u2, vid), clean=True)
+                co_p[co] = 0.0
+                pass
+        ### Global
+        if g_entropy is not None:
+            wg = co_g.get(co)
+            if wg is None:
+                wg = 0.0
+            found = g_entropy.get(vid)
+            if found is not None:
+                wg += found[0]  # entropy
+            co_g[co] = wg
+        ### Temporal
+        found = prev_co.get(friend)
+        if found is None:
+            wt = 1
+        else:
+            td = abs(found-t_avg)/3600 ### time difference in hour
+            if td <= 1:
+                wt = 1
+            else:
+                lt = exp(-ct * td)
+                wt = 1- lt
+        prev_co[friend] = t_avg
+        co_t[co] = wt
+        counter += 1
+    ### Post-processing
+    # ### Global (max personal multiply wg)
+    # for co, val in co_g.items():
+    #     wp = co_p.get(co)
+    #     if wp is None:
+    #         wp = 0.0
+    #     co_g[co] = wp * val
+    # ### Temporal (max personal multiply wt)
+    # for co, val in co_t.items():
+    #     wp = co_p.get(co)
+    #     if wp is None:
+    #         wp = 0.0
+    #     co_t[co] = wp * val
     process_time = int(time.time() - query_time)
     debug('Extracted PGT in {0} seconds'.format(process_time), out_file=False)
-    debug(counter)
-    debug(len(co_p), out_file=False)
-    debug(len(co_g), out_file=False)
+    debug('{}'.format(len(co_p), out_file=False))
+    debug('Max p {}'.format(max(co_p.values())))
+    debug('Min p {}'.format(min(co_p.values())))
+    debug('{}'.format(len(co_g), out_file=False))
+    debug('Max g {}'.format(max(co_g.values())))
+    debug('Min g {}'.format(min(co_g.values())))
+    debug('{}'.format(len(co_t), out_file=False))
+    debug('Max t {}'.format(max(co_t.values())))
+    debug('Min t {}'.format(min(co_t.values())))
     pass
 
 def pgt_personal(working_folder, p, k):
@@ -245,7 +287,6 @@ if __name__ == '__main__':
     mode 2: extract global data
     mode 3: run personal factor evaluation on the co-occurrence
     mode 4: run global factor evaluation on the co-occurrence
-    mode 5: run temporal factor evaluation on the co-occurrence
     """
     mode = 0
 
@@ -343,9 +384,6 @@ if __name__ == '__main__':
                         ### global
                         if mode == 4 or mode == 0:
                             g_entropy = pgt_global(working_folder, p, k)
-                        ### temporal
-                        if mode == 5 or mode == 0:
-                            pass
                         for t in ts:
                             for d in ds:
                                 ### extraction
