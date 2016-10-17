@@ -45,7 +45,7 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
         user = all_user[i]
         uid = user.uid
         if counter % 1000 == 0:
-            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal')
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal', out_file=True, out_stdio=False)
             # debug('Skipped {} unused venues'.format(skip))
         for vid, venue in venues.items():
             if venue.count < 2:
@@ -59,7 +59,7 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
                 user_p[(uid, vid)] = pi_lock
         counter += 1
     process_time = int(time.time() - query_time)
-    debug('Extracting personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
+    debug('Extracting personal density of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time), out_file=True)
     texts = []
     query_time = time.time()
     for (uid, lid), density in user_p.items():
@@ -93,7 +93,7 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
         user = users[all_user[i]]
         uid = user.uid
         if counter % 1000 == 0:
-            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Global')
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Global', out_file=True, out_stdio=False)
         for vid, venue in venues.items():
             pi_lock = 0.0   ### ratio of user visit in the location compared to all population
             u_count = 0     ### count of user visit in the location
@@ -114,7 +114,7 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
         freq = len(list_p)
         venue_g[vid] = (ent, freq)
     process_time = int(time.time() - query_time)
-    debug('Extracting venue global of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time))
+    debug('Extracting venue global of {:,} users and {:,} venues in {} seconds'.format(i_finish-i_start, len(venues), process_time), out_file=True)
     debug('Extracted venue global : {}'.format(len(venue_g)))
     texts = []
     query_time = time.time()
@@ -144,6 +144,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     co_g = {}   ### Global
     co_t = {}   ### Temporal
 
+    counter = 0
     query_time = time.time()
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
@@ -151,9 +152,9 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
             # user1,user2,vid,t_diff,frezquency,time1,time2,t_avg
             if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
                 continue
-            u1 = split[0]
-            u2 = split[1]
-            vid = split[2]
+            u1 = int(split[0])
+            u2 = int(split[1])
+            vid = int(split[2])
             t_diff = int(split[3])
             t_avg = float(split[len(split)-1])
             friend = Friend(u1, u2)
@@ -170,23 +171,23 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
                     wp = -log(w1 * w2)
                     found = co_p.get(friend)
                     if found is not None:
-                        debug('{} - {}'.format(wp, found))
                         wp = max(wp, found)
-                        debug('{} - {}'.format(wp, found))
                     co_p[friend] = wp
-                    debug('A', out_file=False)
                 else:
                     # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
+                    debug('{},{},{}'.format(u1, u2, vid), clean=True)
                     pass
             ### Global
             if g_entropy is not None:
-                wg = g_entropy.get(vid)
-                found = co_g.get(friend)
+                wg = co_g.get(vid)
+                found = g_entropy.get(friend)
                 if found is not None:
-                    wg += found
+                    wg += found[0]  # entropy
                 co_g[friend] = wg
+            counter += 1
     process_time = int(time.time() - query_time)
     debug('Extracted PGT in {0} seconds'.format(process_time), out_file=False)
+    debug(counter)
     debug(len(co_p), out_file=False)
     debug(len(co_g), out_file=False)
     pass
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     mode 4: run global factor evaluation on the co-occurrence
     mode 5: run temporal factor evaluation on the co-occurrence
     """
-    mode = 2
+    mode = 0
 
     debug('PGT start')
     try:
@@ -296,9 +297,9 @@ if __name__ == '__main__':
         if mode == 2:
             venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
     else:
-        modes = [1]
-        ps = [1]
-        ks = [-1]
+        modes = [0]
+        ps = [0]
+        ks = [0]
         ts = [3600]
         ds = [0]
         for mode in modes:
