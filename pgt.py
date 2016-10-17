@@ -5,6 +5,7 @@ from classes import *
 from math import exp, log
 from joblib import Parallel, delayed
 
+import re, os
 import sys
 import getopt
 
@@ -46,7 +47,7 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
         uid = all_user[i]
         user = users.get(uid)
         if counter % 1000 == 0:
-            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal', out_file=True, out_stdio=False)
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Personal', out_file=True, out_stdio=True)
             # debug('Skipped {} unused venues'.format(skip))
         for vid, venue in venues.items():
             if venue.count < 2:
@@ -144,6 +145,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     co_p = {}   ### Max personal weight
     co_g = {}   ### Global
     co_t = {}   ### Temporal
+    co_pgt = {} ### PGT Score
 
     query_time = time.time()
     colocations = []
@@ -209,18 +211,23 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
         co_t[co] = wt
         counter += 1
     ### Post-processing
-    # ### Global (max personal multiply wg)
-    # for co, val in co_g.items():
-    #     wp = co_p.get(co)
-    #     if wp is None:
-    #         wp = 0.0
-    #     co_g[co] = wp * val
-    # ### Temporal (max personal multiply wt)
-    # for co, val in co_t.items():
-    #     wp = co_p.get(co)
-    #     if wp is None:
-    #         wp = 0.0
-    #     co_t[co] = wp * val
+    ### Global (max personal multiply wg)
+    for co, val in co_g.items():
+        wp = co_p.get(co)
+        if wp is None:
+            wp = 0.0
+        co_g[co] = wp * val
+    ### Temporal (max personal multiply wt)
+    for co, val in co_t.items():
+        wp = co_p.get(co)
+        if wp is None:
+            wp = 0.0
+        co_t[co] = wp * val
+    ### PGT
+    for co in colocations:
+        wp = co_p.get(co)
+        wg = co_g.get(co)
+        wt = co_t.get(co)
     process_time = int(time.time() - query_time)
     debug('Extracted PGT in {0} seconds'.format(process_time), out_file=False)
     debug('{}'.format(len(co_p), out_file=False))
@@ -232,6 +239,9 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     debug('{}'.format(len(co_t), out_file=False))
     debug('Max t {}'.format(max(co_t.values())))
     debug('Min t {}'.format(min(co_t.values())))
+    # debug('{}'.format(len(co_pgt), out_file=False))
+    # debug('Max pgt {}'.format(max(co_pgt.values())))
+    # debug('Min pgt {}'.format(min(co_pgt.values())))
     pass
 
 def pgt_personal(working_folder, p, k):
@@ -261,8 +271,24 @@ def pgt_global(working_folder, p, k):
     debug('Extracted {} global entropy'.format(len(g_entropy)), out_file=False)
     return g_entropy
 
-def pgt_temporal():
-    pass
+def reduction(working_folder, p, k, mode):
+    debug("start reduce processes", out_file=False)
+    pattern = re.compile('(pgt_personal_density_)(p{}_)(k{}_)(s\d*_)(f(-)?\d*).csv'.format(p,k))
+    texts = []
+    for file in os.listdir(working_folder):
+        if file.endswith(".csv"):
+            if pattern.match(file):
+                debug(file)
+                with open(working_folder + file, 'r') as fr:
+                    for line in fr:
+                        texts.append(line.strip())
+    if mode == 11:
+        output = pd_file.format(p, k)
+        remove_file_if_exists(working_folder + output)
+        write_to_file_buffered(working_folder + output, texts)
+    debug('Finished writing all co location summaries at {}'.format(output), out_file=False)
+    del texts[:]
+    del texts
 
 # Main function
 if __name__ == '__main__':
@@ -287,6 +313,7 @@ if __name__ == '__main__':
     mode 2: extract global data
     mode 3: run personal factor evaluation on the co-occurrence
     mode 4: run global factor evaluation on the co-occurrence
+    mode 11: run reduction personal
     """
     mode = 0
 
@@ -335,11 +362,14 @@ if __name__ == '__main__':
         if mode == 1:
             user_p = user_personal(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
         ### extract global venue entropy
-        if mode == 2:
+        elif mode == 2:
             venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+        ### reducing personal density
+        elif mode == 11:
+            reduce(working_folder, p, k, mode)
     else:
-        modes = [0]
-        ps = [0]
+        modes = [11]
+        ps = [1]
         ks = [0]
         ts = [3600]
         ds = [0]
@@ -356,10 +386,10 @@ if __name__ == '__main__':
                         ss = starts.get(p)
                         ff = finish.get(p)
                         # n_core = 1
-                        n_core = 2
+                        # n_core = 2
                         # n_core = 3
                         # n_core = 4
-                        # n_core = len(ss)
+                        n_core = len(ss)
                         # debug('Number of core: {}'.format(n_core))
                         ### extract personal density values
                         if mode == 1:
@@ -371,6 +401,12 @@ if __name__ == '__main__':
                         ### extract global venue entropy
                         if mode == 2:
                             venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
+            ### reducing personal density
+            elif mode == 11:
+                for p in ps:
+                    for k in ks:
+                        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                        reduction(working_folder, p, k, mode)
             else:
                 ### Perform PGT calculation
                 for p in ps:
