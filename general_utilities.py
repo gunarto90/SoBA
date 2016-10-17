@@ -59,7 +59,7 @@ def write_to_file_buffered(filename, text_list, append=True):
     if temp_str != "":
         write_to_file(filename, temp_str, append, add_linefeed=False)
 
-def debug(message, callerid=None, clean=False, out_stdio=True, out_file=True):
+def debug(message, callerid=None, clean=False, out_stdio=True, out_file=False):
     make_sure_path_exists('./log')
     debug_filename = 'log/log_{}.txt'.format(date.today())
     if IS_DEBUG == False:
