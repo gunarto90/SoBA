@@ -179,8 +179,14 @@ def sort_user_checkins(users):
     uids = []
     query_time = time.time()
     for uid, user in users.items():
-        user.checkins = sorted(user.checkins, key=lambda checkin: checkin.time, reverse=False)   # sort by checkin time
+        user.checkins.sort(key=lambda checkin: checkin.time, reverse=False)   # sort by checkin time
         uids.append(uid)
     process_time = int(time.time() - query_time)
     print('Sorting {0:,} users in {1} seconds'.format(len(users), process_time))
     return uids
+
+def sort_colocation(colocations):
+    query_time = time.time()
+    colocations.sort(key=lambda co: co.t_avg, reverse=False)   # sort by co-occurrence time
+    process_time = int(time.time() - query_time)
+    print('Sorting {0:,} colocations in {1} seconds'.format(len(colocations), process_time))
