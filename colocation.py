@@ -52,21 +52,24 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
     query_time = time.time()
     co_location = {}
     all_user = []
-    for uid1, user in users.items():
-        all_user.append(user)
+    for uid, user in users.items():
+        all_user.append(uid)
     counter = 0
     texts = []
     texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg')
     # texts.append('user1,user2,lat,lon,t_diff,frequency,time1,time2,t_avg')
     if i_finish == -1:
         i_finish = len(all_user)
+    debug('Run co-occurrence from {} to {}'.format(i_start, i_finish), out_file=True)
     for i in range(i_start, i_finish):
-        user1 = all_user[i]
-        if i % 1000 == 0:
-            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_stdio=False)
+        uid1 = all_user[i]
+        user1 = users.get(uid1)
+        if counter % 1000 == 0:
+            debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_file=True, out_stdio=False, callerid='Co-occurrence')
         for j in range(i+1, i_finish):
-            user2 = all_user[j]
-            if user1.uid == user2.uid:
+            uid2 = all_user[j]
+            user2 = users.get(uid2)
+            if uid1 == uid2:
                 continue
             ### No overlapping checkins
             if user1.earliest > user2.latest or user2.earliest > user1.latest:
@@ -102,7 +105,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                 ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
         counter += 1
     process_time = int(time.time() - query_time)
-    debug('Co-occurrence calculation of {0:,} users in {1} seconds'.format((i_finish-i_start), process_time))
+    debug('Co-occurrence calculation of {0:,} users in {1} seconds'.format((i_finish-i_start), process_time), out_file=True)
     write_co_location(co_location, p, k, t_threshold, d_threshold, i_start, i_finish, working_folder)
 
     filename = working_folder + co_raw_part_filename.format(p, k, t_threshold, d_threshold, i_start, i_finish)
@@ -138,7 +141,7 @@ d: distance threshold
 def reducing(p, k, t, d, working_folder):
     debug("start reduce processes", out_file=False)
     # pattern = re.compile('(co_location_)(p{}_)(k{}_)(s\d*_)(f\d*_)(t{}_)(d{}).csv'.format(p,k,t,d))
-    pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
+    pattern = re.compile('(co_location_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f(-)?\d*).csv'.format(p,k,t,d))
     data = {}
     # dataset, base_folder, working_folder, weekend_folder = init_folder(p)
     # folder = working_folder
@@ -174,7 +177,7 @@ def reducing(p, k, t, d, working_folder):
     data.clear()
 
     ### Extract raw co-occurrence data
-    pattern = re.compile('(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f\d*).csv'.format(p,k,t,d))
+    pattern = re.compile('(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\d*_)(f(-)?\d*).csv'.format(p,k,t,d))
     for file in os.listdir(working_folder):
         if file.endswith(".csv"):
             if pattern.match(file):
@@ -218,10 +221,10 @@ if __name__ == '__main__':
     DAY   = 24 * HOUR
     WEEK  = 7 * DAY
     MONTH = 30 * DAY
-    # ts.append(int(0.5 * HOUR))
-    # ts.append(1 * HOUR)
+    ts.append(int(0.5 * HOUR))
+    ts.append(1 * HOUR)
     # ts.append(int(1.5 * HOUR))
-    ts.append(2 * HOUR)
+    # ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
     # ts.append(3 * DAY)
@@ -230,11 +233,11 @@ if __name__ == '__main__':
     # ts.append(1 * MONTH)
     # ts.append(2 * MONTH)
     ### distance threshold to be included
-    ds.append(0)
+    # ds.append(0)
     # ds.append(100)
     # ds.append(250)
     # ds.append(500)
-    # ds.append(750)
+    ds.append(750)
     # ds.append(1000)
     debug("--- Co-occurrence generation started ---")
     for t in ts:
