@@ -2,7 +2,7 @@ from general_utilities import *
 from base import *
 from classes import *
 
-from math import exp
+from math import exp, log
 from joblib import Parallel, delayed
 
 import sys
@@ -29,7 +29,7 @@ def load_user_personal(pd_filename):
     return user_p
 
 def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_finish=-1):
-    debug('Extracting user personal density')
+    debug('Extracting user personal density p: {}, k: {}'.format(p, k))
     pd_filename = pd_format.format(p, k, i_start, i_finish)
     debug(pd_filename)
     user_p = {}             ### key: (user_id, loc_id), value: density value (float)
@@ -135,9 +135,16 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
     del texts
     return venue_g
 
-def extraction(p, k, t, d, working_folder):
+def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
+    debug('Extracting PGT', out_file=False)
     fname = co_raw_filename.format(p, k, t, d)
     debug(fname)
+    co_f = {}   ### Frequency of co-occurrence
+    co_p = {}   ### Max personal weight
+    co_g = {}   ### Global
+    co_t = {}   ### Temporal
+
+    query_time = time.time()
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -150,12 +157,66 @@ def extraction(p, k, t, d, working_folder):
             t_diff = int(split[3])
             t_avg = float(split[len(split)-1])
             friend = Friend(u1, u2)
-
-def pgt_personal(users, working_folder, p, k):
+            ### Frequency
+            found = co_f.get(friend)
+            if found is None:
+                found = 0
+            co_f[friend] = found + 1
+            ### Personal
+            if p_density is not None:
+                w1 = p_density.get((u1, vid))
+                w2 = p_density.get((u2, vid))
+                if w1 is not None and w2 is not None:
+                    wp = -log(w1 * w2)
+                    found = co_p.get(friend)
+                    if found is not None:
+                        debug('{} - {}'.format(wp, found))
+                        wp = max(wp, found)
+                        debug('{} - {}'.format(wp, found))
+                    co_p[friend] = wp
+                    debug('A', out_file=False)
+                else:
+                    # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
+                    pass
+            ### Global
+            if g_entropy is not None:
+                wg = g_entropy.get(vid)
+                found = co_g.get(friend)
+                if found is not None:
+                    wg += found
+                co_g[friend] = wg
+    process_time = int(time.time() - query_time)
+    debug('Extracted PGT in {0} seconds'.format(process_time), out_file=False)
+    debug(len(co_p), out_file=False)
+    debug(len(co_g), out_file=False)
     pass
+
+def pgt_personal(working_folder, p, k):
+    debug('Extracting personal', out_file=False)
+    p_density = {}  ### Density of (uid, loc)
+    with open(working_folder + pd_file.format(p,k), 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            uid = int(split[0])
+            lid = int(split[1])
+            density = float(split[2])
+            p_density[(uid, lid)] = density
+    debug('Extracted {} personal density'.format(len(p_density)), out_file=False)
+    return p_density
 
 def pgt_global(working_folder, p, k):
-    pass
+    debug('Extracting global', out_file=False)
+    g_entropy = {}
+    with open(working_folder + vg_file.format(p,k), 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            vid = int(split[0])
+            entropy = float(split[1])
+            frequency = int(split[2])
+            entropy = exp(-entropy)
+            g_entropy[vid] = (entropy, frequency)
+    debug('Extracted {} global entropy'.format(len(g_entropy)), out_file=False)
+    return g_entropy
 
 def pgt_temporal():
     pass
@@ -235,12 +296,13 @@ if __name__ == '__main__':
         if mode == 2:
             venue_g = venue_global(users, venues, p, k, working_folder, write=True, i_start=i_start, i_finish=i_finish)
     else:
-        modes = [1, 2]
+        modes = [1]
         ps = [1]
-        ks = [0, -1]
+        ks = [-1]
         ts = [3600]
         ds = [0]
         for mode in modes:
+            debug('Mode: {}'.format(mode), out_file=False)
             if mode == 1 or mode == 2:
                 ### Extract required data
                 for p in ps:
@@ -251,8 +313,8 @@ if __name__ == '__main__':
                         ### Parallelization
                         ss = starts.get(p)
                         ff = finish.get(p)
-                        n_core = 1
-                        # n_core = 2
+                        # n_core = 1
+                        n_core = 2
                         # n_core = 3
                         # n_core = 4
                         # n_core = len(ss)
@@ -262,7 +324,7 @@ if __name__ == '__main__':
                             if n_core == 1:
                                 user_p = user_personal(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
                             else:
-                                # user_p = Parallel(n_jobs=n_core)(delayed(user_personal)(users, venues, p, k, working_folder, write=write, i_start=ss[i], i_finish=ff[i]) for i in range(len(ss)))
+                                user_p = Parallel(n_jobs=n_core)(delayed(user_personal)(users, venues, p, k, working_folder, write=write, i_start=ss[i], i_finish=ff[i]) for i in range(len(ss)))
                                 pass
                         ### extract global venue entropy
                         if mode == 2:
@@ -271,12 +333,21 @@ if __name__ == '__main__':
                 ### Perform PGT calculation
                 for p in ps:
                     for k in ks:
+                        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                        p_density = None
+                        g_entropy = None
+                        ### personal
+                        if mode == 3 or mode == 0:
+                            p_density = pgt_personal(working_folder, p, k)
+                        ### global
+                        if mode == 4 or mode == 0:
+                            g_entropy = pgt_global(working_folder, p, k)
+                        ### temporal
+                        if mode == 5 or mode == 0:
+                            pass
                         for t in ts:
                             for d in ds:
                                 ### extraction
-                                extraction(p, k, t, d, working_folder)
-                                ### personal
-                                ### global
-                                ### temporal
+                                extraction(working_folder, p, k, t, d, p_density, g_entropy)
                                 pass
     debug('PGT finished')
