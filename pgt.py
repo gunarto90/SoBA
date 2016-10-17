@@ -145,10 +145,15 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     co_p = {}   ### Max personal weight
     co_g = {}   ### Global
     co_t = {}   ### Temporal
-    co_pgt = {} ### PGT Score
+    G0   = {}   ### Frequency function
+    G1   = {}   ### Personal average function
+    G2   = {}   ### Personal max function
+    G3   = {}   ### P + G function
+    G4   = {}   ### P + G + T function
 
     query_time = time.time()
-    colocations = []
+    colocations = {}
+    counter = 0
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -156,80 +161,91 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
             if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
                 continue
             co = Colocation(split)
-            colocations.append(co)
+            friend = Friend(co.u1, co.u2)
+            found = colocations.get(friend)
+            if found is None:
+                found = []
+            found.append(co)
+            colocations[friend] = found
+            counter += 1
+    debug('Found {} co-occurrences'.format(counter))
+    # x = colocations.get(Friend(0,7))
+    # for ix in x:
+    #     debug(ix)
     sort_colocation(colocations)
+    # for ix in x:
+    #     debug(ix)
     counter = 0
     prev_co = {}
-    for co in colocations:
-        u1 = co.u1
-        u2 = co.u2
-        vid = co.vid
-        t_diff = co.t_diff
-        t_avg = co.t_avg
-        friend = Friend(u1, u2)
+    for friend, cos in colocations.items():
         ### Frequency
-        found = co_f.get(friend)
-        if found is None:
-            found = 0
-        co_f[friend] = found + 1
+        temp_f = co_f.get(friend)
+        if temp_f is None:
+            temp_f = 0
         ### Personal
-        if p_density is not None:
-            w1 = p_density.get((u1, vid))
-            w2 = p_density.get((u2, vid))
-            if w1 is not None and w2 is not None:
-                wp = -log(w1 * w2)
-                found = co_p.get(friend)
-                if found is not None:
-                    wp = max(wp, found)
-                co_p[co] = wp
-            else:
-                # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
-                # debug('{},{},{}'.format(u1, u2, vid), clean=True)
-                co_p[co] = 0.0
-                pass
+        temp_p = []
         ### Global
-        if g_entropy is not None:
-            wg = co_g.get(co)
-            if wg is None:
-                wg = 0.0
-            found = g_entropy.get(vid)
-            if found is not None:
-                wg += found[0]  # entropy
-            co_g[co] = wg
+        temp_g = []
         ### Temporal
-        found = prev_co.get(friend)
-        if found is None:
-            wt = 1
-        else:
-            td = abs(found-t_avg)/3600 ### time difference in hour
-            if td <= 1:
+        temp_t = []
+        ### In all co-occurrences between two users
+        for co in cos:
+            u1 = co.u1
+            u2 = co.u2
+            vid = co.vid
+            t_diff = co.t_diff
+            t_avg = co.t_avg
+            ### Frequency
+            temp_f += 1
+            co_f[friend] = temp_f
+            ### Personal
+            if p_density is not None:
+                w1 = p_density.get((u1, vid))
+                w2 = p_density.get((u2, vid))
+                if w1 is not None and w2 is not None:
+                    wp = -log(w1 * w2)
+                    
+                else:
+                    # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
+                    # debug('{},{},{}'.format(u1, u2, vid), clean=True)
+                    wp = 0.0
+                temp_p.append(wp)
+                co_p[co] = wp
+            ### Global
+            if g_entropy is not None:
+                found = g_entropy.get(vid)
+                if found is not None:
+                    wg = found[0]  # entropy
+                else:
+                    wg = 0.0
+                temp_g.append(wg)
+                co_g[co] = wg
+            ### Temporal
+            found = prev_co.get(friend)
+            if found is None:
                 wt = 1
             else:
-                lt = exp(-ct * td)
-                wt = 1- lt
-        prev_co[friend] = t_avg
-        co_t[co] = wt
-        counter += 1
-    ### Post-processing
-    ### Global (max personal multiply wg)
-    for co, val in co_g.items():
-        wp = co_p.get(co)
-        if wp is None:
-            wp = 0.0
-        co_g[co] = wp * val
-    ### Temporal (max personal multiply wt)
-    for co, val in co_t.items():
-        wp = co_p.get(co)
-        if wp is None:
-            wp = 0.0
-        co_t[co] = wp * val
-    ### PGT
-    for co in colocations:
-        wp = co_p.get(co)
-        wg = co_g.get(co)
-        wt = co_t.get(co)
+                td = abs(found-t_avg)/3600 ### time difference in hour
+                if td <= 1:
+                    wt = 1
+                else:
+                    lt = exp(-ct * td)
+                    wt = 1- lt
+            temp_t.append(wt)
+            co_t[co] = wt
+            prev_co[friend] = t_avg
+            counter += 1
+        ### Function evaluation
+        G0[friend] = temp_f
+        G1[friend] = sum(temp_p)
+        G2[friend] = max(temp_p)
+        G3[friend] = max(temp_p)*sum(temp_g)
+        total = 0.0
+        for i in range(len(temp_g)):
+            total += temp_g[i] * temp_t[i]
+        G4[friend] = max(temp_p) * total
     process_time = int(time.time() - query_time)
-    debug('Extracted PGT in {0} seconds'.format(process_time), out_file=False)
+    debug('Extracted {1} co-occurrences in {0} seconds'.format(process_time, counter), out_file=False)
     debug('{}'.format(len(co_p), out_file=False))
     debug('Max p {}'.format(max(co_p.values())))
     debug('Min p {}'.format(min(co_p.values())))
@@ -242,7 +258,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     # debug('{}'.format(len(co_pgt), out_file=False))
     # debug('Max pgt {}'.format(max(co_pgt.values())))
     # debug('Min pgt {}'.format(min(co_pgt.values())))
-    pass
+    return G0, G1, G2, G3
 
 def pgt_personal(working_folder, p, k):
     debug('Extracting personal', out_file=False)
@@ -368,7 +384,7 @@ if __name__ == '__main__':
         elif mode == 11:
             reduce(working_folder, p, k, mode)
     else:
-        modes = [11]
+        modes = [0]
         ps = [1]
         ks = [0]
         ts = [3600]
