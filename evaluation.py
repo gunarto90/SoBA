@@ -18,17 +18,22 @@ from scipy import interp
 import numpy as np
 import time
 
-def generate_report(X, y, Xs, notes, p, k, t, d):
+def generate_report(X, y, assign, notes, p, k, t, d):
     texts = []
-    for idx in range(len(Xs)):
-        Xi = Xs[idx]
-        debug('Evaluating {}'.format(notes[idx]))
-        lists, names = sampling(X, y)
-        for i in range(len(lists)):
-            (Xii, yii) = lists[i]
-            name = names[i]
-            debug('Evaluating {}'.format(name))
-            mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(Xii, yii)
+    lists, names = sampling(X, y)
+    for i in range(len(lists)):
+        (Xi, yi) = lists[i]
+        Xs = []
+        Xs.append(Xi)
+        for arr in assign:
+            X_indexed = Xi[:, arr]
+            Xs.append(X_indexed)
+        name = names[i]
+        debug('Evaluating {}'.format(name))
+        for idx in range(len(Xs)):
+            Xii = Xs[idx]
+            debug('Feature {}'.format(notes[idx]))
+            mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(Xii, yi)
             text = '{},{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{},{},{},{}'.format(
                 p, k, t, d, 
                 mean_auc, mean_precision, mean_recall, mean_f1, 
@@ -37,6 +42,10 @@ def generate_report(X, y, Xs, notes, p, k, t, d):
                 name
             )
             texts.append(text)
+    for idx in range(len(X)):
+        Xi = Xs[idx]
+        debug('Evaluating {}'.format(notes[idx]))
+        
     return texts
 
 def sampling(X, y):
@@ -47,13 +56,13 @@ def sampling(X, y):
     names.append('original')
 
     ### ovesampling
-    # query_time = time.time()
-    # pp = SMOTE(kind='regular')
-    # X_pp, y_pp = pp.fit_sample(X, y)
-    # lists.append((X_pp, y_pp))
-    # names.append('over-SMOTE')
-    # process_time = int(time.time() - query_time)
-    # debug('Finished sampling SMOTE in {} seconds'.format(process_time))
+    query_time = time.time()
+    pp = SMOTE(kind='regular')
+    X_pp, y_pp = pp.fit_sample(X, y)
+    lists.append((X_pp, y_pp))
+    names.append('over-SMOTE')
+    process_time = int(time.time() - query_time)
+    debug('Finished sampling SMOTE in {} seconds'.format(process_time))
 
     ### undersampling
     # query_time = time.time()
@@ -65,20 +74,21 @@ def sampling(X, y):
     # debug('Finished sampling ENN in {} seconds'.format(process_time))
     
     ### oversampling + undersampling
-    # query_time = time.time()
-    # pp = SMOTEENN()
-    # X_pp, y_pp = pp.fit_sample(X, y)
-    # lists.append((X_pp, y_pp))
-    # names.append('over+under-SMOTE-ENN')
-    # process_time = int(time.time() - query_time)
-    # debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
+    query_time = time.time()
+    pp = SMOTEENN()
+    X_pp, y_pp = pp.fit_sample(X, y)
+    lists.append((X_pp, y_pp))
+    names.append('over+under-SMOTE-ENN')
+    process_time = int(time.time() - query_time)
+    debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
     
     return lists, names
 
 def auc_score(X, y):
+    # cv = StratifiedKFold(n_splits=10)
     cv = StratifiedKFold(n_splits=5)
     # clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=1)
-    clf = RandomForestClassifier(n_jobs=1)
+    clf = RandomForestClassifier(n_jobs=4)
 
     mean_tpr = 0.0
     mean_fpr = np.linspace(0, 1, 100)
@@ -94,6 +104,8 @@ def auc_score(X, y):
 
     i = 0
     for (train, test) in cv.split(X, y):
+        # debug(X[train][:3])
+        # debug(y[train][:3])
         fit = clf.fit(X[train], y[train])
         probas_ = fit.predict_proba(X[test])
         inference = fit.predict(X[test])
@@ -122,11 +134,6 @@ def auc_score(X, y):
     mean_recall /= cv.get_n_splits(X, y)
     mean_f1 /= cv.get_n_splits(X, y)
     
-    debug(mean_auc)
-    debug(mean_precision)
-    debug(mean_recall)
-    debug(mean_f1)
-    debug(total_ytrue)
-    debug(len(y))
+    debug('{:.3f} {:.3f} {:.3f} {:.3f} {} {}'.format(mean_auc, mean_precision, mean_recall, mean_f1, int(total_ytrue), len(y)))
 
     return mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue

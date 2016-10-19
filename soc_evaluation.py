@@ -18,14 +18,9 @@ def testing(p, k, t, d, working_folder):
         ncol = dataset.shape[1]
         X = dataset[:,2:ncol-1] # Remove uid 1 and uid 2
         y = dataset[:,ncol-1]
-        Xs = []
         notes = ["All", "frequency", "diversity", "duration", "stability", "F+D", "F+TD", "F+TS", "D+TD", "D+TS", "TD+TS", "F+D+TD", "F+D+TS", "F+TD+TS", "D+TD+TS"]
-        Xs.append(X)
         assign = [[0], [1], [2], [3], [0,1], [0,2],[ 0,3], [1,2], [1,3], [2,3], [0,1,2], [0,1,3], [0,2,3], [1,2,3]]
-        for arr in assign:
-            X_indexed = X[:, arr]
-            Xs.append(X_indexed)
-        texts = generate_report(X, y, Xs, notes, p, k, t, d)
+        texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
 # Main function

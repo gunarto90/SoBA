@@ -16,16 +16,11 @@ def testing(p, k, t, d, working_folder):
         # print(dataset.shape)
         ncol = dataset.shape[1]
         Xs = []
-        notes = ["All", "F#", "P0", "P", "PG", "PGT"]
+        notes = ["All", "P0", "P", "PG", "PGT"]
         X = dataset[:,1:ncol-1] # Remove index 0 (frequency)    # Using machine learning
         y = dataset[:,ncol-1]
-        Xs.append(X)
-        # Xs.append(X[:, 0])  # Only frequency
         assign = [[0], [1], [2], [3]]
-        # for arr in assign:
-        #     X_indexed = X[:, arr]
-        #     Xs.append(X_indexed)
-        texts = generate_report(X, y, Xs, notes, p, k, t, d)
+        texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
 # Main function
