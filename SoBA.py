@@ -35,10 +35,12 @@ def extraction(p, k, t, d, working_folder):
     try:
         with open(working_folder + fname, 'r') as fr:
             for line in fr:
+                if line.strip().startswith('user1,user2'):
+                    continue
+                if line.strip() == '':
+                    continue
                 split = line.strip().split(',')
                 # user1,user2,vid,t_diff,frequency,time1,time2,t_avg
-                if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
-                    continue
                 u1 = split[0]
                 u2 = split[1]
                 vid = split[2]
@@ -170,8 +172,9 @@ def extraction(p, k, t, d, working_folder):
         debug('Finished extracting co-occurrence features', out_file=False)
 
         return stat_f, stat_d, stat_td, stat_ts
-    except:
+    except Exception as ex:
         debug('File not found: {}'.format(working_folder + fname))
+        debug(ex)
         return None, None, None, None
 
 def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
@@ -249,20 +252,22 @@ if __name__ == '__main__':
     ks = []     ### Mode for top k users: 0 Weekend, -1 All users
     ts = []     ### Time threshold
     ds = []     ### Distance threshold
-    ### project to be included
-    ps.append(0)
-    ps.append(1)
-    ### mode to be included
-    ks.append(0)
-    ks.append(-1)
-    ### time threshold to be included
+
     HOUR  = 3600
     DAY   = 24 * HOUR
     WEEK  = 7 * DAY
     MONTH = 30 * DAY
+
+    ### project to be included
+    ps.append(0)
+    # ps.append(1)
+    ### mode to be included
+    ks.append(0)
+    # ks.append(-1)
+    ### time threshold to be included
     ts.append(int(0.5 * HOUR))
-    ts.append(1 * HOUR)
-    ts.append(int(1.5 * HOUR))
+    # ts.append(1 * HOUR)
+    # ts.append(int(1.5 * HOUR))
     ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
@@ -272,9 +277,9 @@ if __name__ == '__main__':
     # ts.append(1 * MONTH)
     # ts.append(2 * MONTH)
     ### distance threshold to be included
-    ds.append(0)
-    ds.append(250)
-    ds.append(500)
+    # ds.append(0)
+    # ds.append(250)
+    # ds.append(500)
     ds.append(750)
     # ds.append(1000)
     debug("--- Social inference started ---")
@@ -297,5 +302,3 @@ if __name__ == '__main__':
                     ### testing extracted csv
                     # testing(p, k, t, d, working_folder)
     debug("--- Social inference finished ---")
-
-
