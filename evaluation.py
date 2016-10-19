@@ -2,77 +2,83 @@ from general_utilities import *
 from base import *
 from classes import *
 
-import time
-import numpy as np
-
-from scipy import interp
-
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import EditedNearestNeighbours
 from imblearn.combine import SMOTEENN
-from imblearn.ensemble import EasyEnsemble
 
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.metrics import roc_curve, auc
 # from sklearn.metrics import precision_recall_curve
-from sklearn.model_selection import cross_val_score
+# from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 
-evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
+from scipy import interp
 
-def cv_score(X, y):
-    ### using 2 cores (n_jobs = 2)
-    clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=2)
-    scores = cross_val_score(clf, X, y, cv=5)
-    # print(scores)
-    score = scores.mean()
-    # print(score)
-    debug('Finished evaluating cross validation scores')
-    return score
+import numpy as np
+import time
+
+def generate_report(X, y, Xs, notes, p, k, t, d):
+    texts = []
+    for idx in range(len(Xs)):
+        Xi = Xs[idx]
+        debug('Evaluating {}'.format(notes[idx]))
+        lists, names = sampling(X, y)
+        for i in range(len(lists)):
+            (Xii, yii) = lists[i]
+            name = names[i]
+            debug('Evaluating {}'.format(name))
+            mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(Xii, yii)
+            text = '{},{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{},{},{},{}'.format(
+                p, k, t, d, 
+                mean_auc, mean_precision, mean_recall, mean_f1, 
+                total_ytrue, len(y),
+                notes[idx],
+                name
+            )
+            texts.append(text)
+    return texts
 
 def sampling(X, y):
+    debug('Started sampling')
     lists = []
     names = []
     lists.append((X, y))
     names.append('original')
+
     ### ovesampling
-    sm = SMOTE(kind='regular')
-    X_smote, y_smote = sm.fit_sample(X, y)
-    lists.append((X_smote, y_smote))
-    names.append('over-SMOTE')
+    # query_time = time.time()
+    # pp = SMOTE(kind='regular')
+    # X_pp, y_pp = pp.fit_sample(X, y)
+    # lists.append((X_pp, y_pp))
+    # names.append('over-SMOTE')
+    # process_time = int(time.time() - query_time)
+    # debug('Finished sampling SMOTE in {} seconds'.format(process_time))
+
     ### undersampling
-    sm = SMOTEENN()
-    X_combine, y_combine = sm.fit_sample(X, y)
-    lists.append((X_combine, y_combine))
-    names.append('over+under-SMOTE-ENN')
-    debug('Finished sampling')
+    # query_time = time.time()
+    # pp = EditedNearestNeighbours()
+    # X_pp, y_pp = pp.fit_sample(X, y)
+    # lists.append((X_pp, y_pp))
+    # names.append('under-ENN')
+    # process_time = int(time.time() - query_time)
+    # debug('Finished sampling ENN in {} seconds'.format(process_time))
+    
+    ### oversampling + undersampling
+    # query_time = time.time()
+    # pp = SMOTEENN()
+    # X_pp, y_pp = pp.fit_sample(X, y)
+    # lists.append((X_pp, y_pp))
+    # names.append('over+under-SMOTE-ENN')
+    # process_time = int(time.time() - query_time)
+    # debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
+    
     return lists, names
 
-def testing(p, k, t, d, working_folder):
-    filename = working_folder + evaluation_filename.format(p, k, t, d)
-    if is_file_exists(filename) is True:
-        #create the training & test sets, skipping the header row with [1:]
-        dataset = np.genfromtxt(filename, delimiter=',')[1:]
-        # print(dataset.shape)
-        ncol = dataset.shape[1]
-        X = dataset[:,0:ncol-2]
-        y = dataset[:,ncol-1]
-        mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(X, y)
-        # lists, names = sampling(X, y)
-        # scores = {}
-        # for i in range(len(lists)):
-        #     (Xi, yi) = lists[i]
-        #     name = names[i]
-        #     score = cv_score(Xi, yi)
-        #     scores[name] = score
-        # debug(scores)
-
-        return '{},{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{},{}'.format(p, k, t, d, mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue,len(y))
-    return None
-
 def auc_score(X, y):
-    cv = StratifiedKFold(n_splits=10)
-    clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=2)
+    cv = StratifiedKFold(n_splits=5)
+    # clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=1)
+    clf = RandomForestClassifier(n_jobs=1)
 
     mean_tpr = 0.0
     mean_fpr = np.linspace(0, 1, 100)
@@ -82,6 +88,9 @@ def auc_score(X, y):
     mean_f1 = 0.0
 
     total_ytrue = sum(y)
+
+    # debug(len(X))
+    # debug(len(y))
 
     i = 0
     for (train, test) in cv.split(X, y):
@@ -118,58 +127,6 @@ def auc_score(X, y):
     debug(mean_recall)
     debug(mean_f1)
     debug(total_ytrue)
+    debug(len(y))
 
     return mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue
-
-# Main function
-if __name__ == '__main__':
-    ### Global parameter for the experiments
-    ps = []     ### Active project: 0 Gowalla, 1 Brightkite
-    ks = []     ### Mode for top k users: 0 Weekend, -1 All users
-    ts = []     ### Time threshold
-    ds = []     ### Distance threshold
-    ### project to be included
-    ps.append(0)
-    ps.append(1)
-    ### mode to be included
-    ks.append(0)
-    ks.append(-1)
-    ### time threshold to be included
-    HOUR  = 3600
-    DAY   = 24 * HOUR
-    WEEK  = 7 * DAY
-    MONTH = 30 * DAY
-    ts.append(int(0.5 * HOUR))
-    ts.append(1 * HOUR)
-    ts.append(int(1.5 * HOUR))
-    ts.append(2 * HOUR)
-    # ts.append(1 * DAY)
-    # ts.append(2 * DAY)
-    # ts.append(3 * DAY)
-    # ts.append(1 * WEEK)
-    # ts.append(2 * WEEK)
-    # ts.append(1 * MONTH)
-    # ts.append(2 * MONTH)
-    ### distance threshold to be included
-    ds.append(0)
-    ds.append(250)
-    ds.append(500)
-    ds.append(750)
-    # ds.append(1000)
-    debug("--- Evaluation started ---")
-    header = 'p,k,t,d,auc,precision,recall,f1,link_found,all_data'
-    for p in ps:
-        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-        result_filename = working_folder + 'result.csv'
-        debug(result_filename)
-        remove_file_if_exists(result_filename)
-        write_to_file(result_filename, header)
-        for k in ks:
-            for t in ts:
-                for d in ds:
-                    debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                    ### Initialize variables
-                    text = testing(p, k, t, d, working_folder)
-                    if text is not None:
-                        write_to_file(result_filename, text)
-    debug("--- Evaluation finished ---")
