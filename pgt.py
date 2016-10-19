@@ -14,6 +14,7 @@ pd_format = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'
 vg_format = 'pgt_venue_global_p{}_k{}_s{}_f{}.csv'
 pd_file = 'pgt_personal_density_p{}_k{}.csv'
 vg_file = 'pgt_venue_global_p{}_k{}.csv'
+co_eval_file = 'pgt_evaluation_p{}_k{}_t{}_d{}.csv'
 
 ### parameters
 cd = 1.5    ### distance parameter in personal density function [1,3]
@@ -137,7 +138,7 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
     del texts
     return venue_g
 
-def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
+def extraction(working_folder, p, k, t, d, friends, co_eval_file, p_density=None, g_entropy=None):
     debug('Extracting PGT', out_file=False)
     fname = co_raw_filename.format(p, k, t, d)
     debug(fname)
@@ -145,11 +146,15 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     co_p = {}   ### Max personal weight
     co_g = {}   ### Global
     co_t = {}   ### Temporal
-    G0   = {}   ### Frequency function
-    G1   = {}   ### Personal average function
-    G2   = {}   ### Personal max function
-    G3   = {}   ### P + G function
-    G4   = {}   ### P + G + T function
+    scores = [] ### For accomodating all scores
+    scores.append({})   ### Frequency function
+    scores.append({})   ### Personal average function
+    scores.append({})   ### Personal max function
+    scores.append({})   ### P + G function
+    scores.append({})   ### P + G + T function
+
+    remove_file_if_exists(co_eval_file)
+    texts = []
 
     query_time = time.time()
     colocations = {}
@@ -157,8 +162,10 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     with open(working_folder + fname, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
-            # user1,user2,vid,t_diff,frezquency,time1,time2,t_avg
-            if line.strip() == 'user1,user2,vid,t_diff,frequency,time1,time2,t_avg':
+            # user1,user2,vid,t_diff,frezquency,time1,time2,t_avg,dist
+            if line.strip().startswith('user1,user2'):
+                continue
+            if line.strip() == '':
                 continue
             co = Colocation(split)
             friend = Friend(co.u1, co.u2)
@@ -168,7 +175,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
             found.append(co)
             colocations[friend] = found
             counter += 1
-    debug('Found {} co-occurrences'.format(counter))
+    debug('Found {} co-occurrences from {} friends'.format(counter, len(colocations)))
     # x = colocations.get(Friend(0,7))
     # for ix in x:
     #     debug(ix)
@@ -176,6 +183,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     # for ix in x:
     #     debug(ix)
     counter = 0
+    count_co = 0
     prev_co = {}
     for friend, cos in colocations.items():
         ### Frequency
@@ -203,8 +211,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
                 w1 = p_density.get((u1, vid))
                 w2 = p_density.get((u2, vid))
                 if w1 is not None and w2 is not None:
-                    wp = -log(w1 * w2)
-                    
+                    wp = -log(w1 * w2)                    
                 else:
                     # debug('Density is not found - user_1: {}, user_2: {}, location:{}'.format(u1, u2, vid))
                     # debug('{},{},{}'.format(u1, u2, vid), clean=True)
@@ -236,16 +243,27 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
             prev_co[friend] = t_avg
             counter += 1
         ### Function evaluation
-        G0[friend] = temp_f
-        G1[friend] = sum(temp_p)
-        G2[friend] = max(temp_p)
-        G3[friend] = max(temp_p)*sum(temp_g)
+        scores[0][friend] = temp_f
+        scores[1][friend] = sum(temp_p)
+        scores[2][friend] = max(temp_p)
+        scores[3][friend] = max(temp_p)*sum(temp_g)
         total = 0.0
         for i in range(len(temp_g)):
             total += temp_g[i] * temp_t[i]
-        G4[friend] = max(temp_p) * total
+        scores[4][friend] = max(temp_p) * total
+        # if count_co % 100 == 0:
+        #     debug('Processed {} of {} friends [{:.3f}%]'.format(count_co, len(colocations), float(count_co)*100/len(colocations)), callerid='PGT Extract', out_file=True)
+        # ### Add to texts
+        # check = friend in friends
+        # if check is True:
+        #     link = 1
+        # else:
+        #     link = 0
+        # texts.append('{},{},{},{},{}'.format(scores[0][friend], scores[1][friend], scores[2][friend], scores[3][friend], scores[4][friend], link))
+        # count_co += 1
     process_time = int(time.time() - query_time)
     debug('Extracted {1} co-occurrences in {0} seconds'.format(process_time, counter), out_file=False)
+    # write_to_file_buffered(co_eval_file, texts)
     debug('{}'.format(len(co_p), out_file=False))
     debug('Max p {}'.format(max(co_p.values())))
     debug('Min p {}'.format(min(co_p.values())))
@@ -258,7 +276,7 @@ def extraction(working_folder, p, k, t, d, p_density=None, g_entropy=None):
     # debug('{}'.format(len(co_pgt), out_file=False))
     # debug('Max pgt {}'.format(max(co_pgt.values())))
     # debug('Min pgt {}'.format(min(co_pgt.values())))
-    return G0, G1, G2, G3
+    return colocations, scores
 
 def pgt_personal(working_folder, p, k):
     debug('Extracting personal', out_file=False)
@@ -305,6 +323,44 @@ def reduction(working_folder, p, k, mode):
     debug('Finished writing all co location summaries at {}'.format(output), out_file=False)
     del texts[:]
     del texts
+
+def load_friendship(file):
+    friends = {}
+    with open(file, 'r') as fr:
+        for line in fr:
+            if line.startswith('u'):
+                continue
+            if line.strip() == '':
+                continue
+            split = line.strip().split(',')
+            u1 = split[0]
+            u2 = split[1]
+            f = Friend(u1, u2)
+            friends[f] = 1
+    debug('Loaded {} friends from {}'.format(len(friends), file))
+    return friends
+
+def merge(scores, friends, all_infer_link, i_start, i_finish, working_folder, co_eval_file):
+    counter = 0
+    texts = []
+    if i_finish == -1:
+        i_finish = len(all_infer_link)
+    for i in range(i_start, i_finish):
+        if counter % 10000 == 0:
+            debug('Processed {} of {} friends [{:.3f}%]'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Merge', out_file=True, out_stdio=False)
+        fi = all_infer_link[i]
+        link = friends.get(fi)
+        if link is None:
+            link = 0
+        w = []
+        for i in range(len(scores)):
+            w.append(scores[i].get(fi))
+        cond = sum(w) - w[0] > 0
+        if cond is True:
+            ### Frequency, Sum Personal, Max Personal, P + G, P + G + T, Link
+            texts.append('{},{},{},{},{}'.format(w[0], w[1], w[2], w[3], link))
+        counter += 1
+    write_to_file_buffered(working_folder + co_eval_file, texts)
 
 # Main function
 if __name__ == '__main__':
@@ -385,10 +441,10 @@ if __name__ == '__main__':
             reduce(working_folder, p, k, mode)
     else:
         modes = [0]
-        ps = [1]
-        ks = [0]
-        ts = [3600]
-        ds = [0]
+        ps = [0]
+        ks = [-1]
+        ts = [1800, 3600, 5400, 7200]
+        ds = [0, 250, 500, 750]
         for mode in modes:
             debug('Mode: {}'.format(mode), out_file=False)
             if mode == 1 or mode == 2:
@@ -401,11 +457,11 @@ if __name__ == '__main__':
                         ### Parallelization
                         ss = starts.get(p)
                         ff = finish.get(p)
-                        # n_core = 1
+                        n_core = 1
                         # n_core = 2
                         # n_core = 3
                         # n_core = 4
-                        n_core = len(ss)
+                        # n_core = len(ss)
                         # debug('Number of core: {}'.format(n_core))
                         ### extract personal density values
                         if mode == 1:
@@ -425,11 +481,23 @@ if __name__ == '__main__':
                         reduction(working_folder, p, k, mode)
             else:
                 ### Perform PGT calculation
+                ss = []
+                ff = []
                 for p in ps:
+                    ### Parallelization
+                    n_core = 1
+                    # n_core = 2
+                    # n_core = 3
+                    # n_core = 4
+                    # n_core = 8
+                    # n_core = len(ss)
+                    debug('Number of core: {}'.format(n_core))
                     for k in ks:
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+                        dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
                         p_density = None
                         g_entropy = None
+                        friends = load_friendship(base_folder + FRIEND_FILE)
                         ### personal
                         if mode == 3 or mode == 0:
                             p_density = pgt_personal(working_folder, p, k)
@@ -438,7 +506,34 @@ if __name__ == '__main__':
                             g_entropy = pgt_global(working_folder, p, k)
                         for t in ts:
                             for d in ds:
+                                if is_file_exists(working_folder + co_raw_filename.format(p,k,t,d)) is False:
+                                    continue
                                 ### extraction
-                                extraction(working_folder, p, k, t, d, p_density, g_entropy)
-                                pass
+                                colocations, scores = extraction(working_folder, p, k, t, d, friends, co_eval_file, p_density, g_entropy)
+                                # ### Compare with friends
+                                remove_file_if_exists(working_folder + co_eval_file.format(p,k,t,d))
+                                all_infer_link = []
+                                for friend, cos in colocations.items():
+                                    all_infer_link.append(friend)
+                                chunk_size = int(len(all_infer_link)/n_core) + 1
+                                for i in range(n_core):
+                                    ss.append(i * chunk_size)
+                                    if i == n_core - 1:
+                                        ff.append(len(all_infer_link))
+                                    else:
+                                        ff.append((i+1) * chunk_size + 1)
+                                # debug(len(all_infer_link))
+                                # debug(ss)
+                                # debug(ff)
+                                texts = []
+                                if n_core == 1:
+                                    merge(scores, friends, all_infer_link, i_start, i_finish, working_folder, co_eval_file.format(p,k,t,d))
+                                else:
+                                    Parallel(n_jobs=n_core)(delayed(merge)(scores, friends, all_infer_link, ss[i], ff[i], working_folder, co_eval_file.format(p,k,t,d)) for i in range(len(ss)))
+                                del all_infer_link[:]
+                                del all_infer_link
+                                colocations.clear()
+                                for i in range(len(scores)):
+                                    scores[i].clear()
+                        friends.clear()
     debug('PGT finished')
