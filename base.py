@@ -85,7 +85,7 @@ def init_checkins(venues, file=None):
                 count_weekend += 1
                 # write_to_file(working_folder + 'checkin_weekend.csv', line.strip())
     process_time = int(time.time() - query_time)
-    print('Processing {0:,} checkins in {1} seconds'.format(counter, process_time))
+    debug('Processing {0:,} checkins in {1} seconds'.format(counter, process_time))
     debug('There are {} errors in checkin file'.format(error))
     # debug('Count weekend: {:,}'.format(count_weekend))
     # if IS_DEBUG:
@@ -114,7 +114,7 @@ def init_friendships(users, file=None):
                 friend.append(fid)
             counter += 1
     process_time = int(time.time() - query_time)
-    print('Processing {0:,} friendships in {1} seconds'.format(counter, process_time))
+    debug('Processing {0:,} friendships in {1} seconds'.format(counter, process_time))
     return friends
 
 def init_venues(file=None):
@@ -142,7 +142,7 @@ def init_venues(file=None):
                 v.lon = (v.lon + lon) /2
             counter += 1
     process_time = int(time.time() - query_time)
-    print('Processing {0:,} venues in {1} seconds'.format(counter, process_time))
+    debug('Processing {0:,} venues in {1} seconds'.format(counter, process_time))
     debug('There are {} errors in venue file'.format(error))
     return venues
 
@@ -188,7 +188,7 @@ def sort_user_checkins(users):
         user.checkins.sort(key=lambda checkin: checkin.time, reverse=False)   # sort by checkin time
         uids.append(uid)
     process_time = int(time.time() - query_time)
-    print('Sorting {0:,} users in {1} seconds'.format(len(users), process_time))
+    debug('Sorting {0:,} users in {1} seconds'.format(len(users), process_time))
     return uids
 
 def sort_colocation(colocations):
@@ -196,4 +196,4 @@ def sort_colocation(colocations):
     for friend, co in colocations.items():
         co = sorted(co, key=lambda co: co.t_avg, reverse=False)   # sort by co-occurrence time
     process_time = int(time.time() - query_time)
-    print('Sorting {0:,} colocations in {1} seconds'.format(len(colocations), process_time))
+    debug('Sorting {0:,} colocations in {1} seconds'.format(len(colocations), process_time))
