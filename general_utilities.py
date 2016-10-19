@@ -105,4 +105,4 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * asin(sqrt(a)) 
     km = 6367 * c
     distance = km * 1000
-    return distance
+    return distance # in meter
