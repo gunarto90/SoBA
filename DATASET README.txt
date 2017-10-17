@@ -1,3 +1,8 @@
+Please find the dataset used in this experiments from this link
+http://bit.ly/pakdd2017-dataset-social
+
+PS: The original dataset provided from SNAP Stanford (http://snap.stanford.edu/data/index.html)
+
 #############################################
 ############### Description #################
 #############################################
