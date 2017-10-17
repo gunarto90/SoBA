@@ -9,12 +9,52 @@ evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
 def write_evaluation(summaries, p, k, t, d):
     texts = []
     texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
+    # texts.append('uid1,uid2,frequency,diversity,duration,stability,popularity,link')
     for friend, evaluation in summaries.items():
+        if evaluation.diversity == 0 and evaluation.duration == 0 and evaluation.stability == 0 and evaluation.popularity == 0:
+            continue
         texts.append(str(evaluation))
     filename = working_folder + evaluation_filename.format(p, k, t, d)
     remove_file_if_exists(filename)
     write_to_file_buffered(filename, texts)
     debug('Finished writing evaluation to {}'.format(filename), out_file=False)
+
+def extract_popularity(working_folder, CHECKIN_FILE):
+    stat_lp = {}    # location popularity
+    p_l = {}
+    p_ul = {}
+    v_c = {}
+    with open(working_folder + CHECKIN_FILE) as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            uid = int(split[0])
+            time = int(split[1])
+            lat = float(split[2])
+            lon = float(split[3])
+            vid = int(split[4])
+            found = p_l.get((uid, vid))
+            if found is None:
+                found = 0
+            p_l[(uid, vid)] = found + 1
+            found = v_c.get(vid)
+            if found is None:
+                found = 0
+            v_c[vid] = found + 1
+    for (uid, vid), frequency in p_l.items():
+            total_count = v_c.get(vid)
+            if total_count is not None:
+                val = frequency / float(total_count)
+                get = p_ul.get(vid)
+                if get is None:
+                    get = []
+                get.append(val)
+                p_ul[vid] = get
+            else:
+                debug('Venue not found: {}'.format(vid))
+    for vid, arr in p_ul.items():
+        ent = entropy(arr)
+        stat_lp[vid] = ent
+    return stat_lp
 
 def extraction(p, k, t, d, working_folder):
     stat_f = {}     # frequency
@@ -177,7 +217,7 @@ def extraction(p, k, t, d, working_folder):
         debug(ex)
         return None, None, None, None
 
-def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d):
+def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_lp, p, k, t, d):
     summaries = {}
 
     if stat_f is None or stat_d is None or stat_td is None or stat_ts is None:
@@ -260,14 +300,14 @@ if __name__ == '__main__':
 
     ### project to be included
     ps.append(0)
-    # ps.append(1)
+    ps.append(1)
     ### mode to be included
     ks.append(0)
-    # ks.append(-1)
+    ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))
-    # ts.append(1 * HOUR)
-    # ts.append(int(1.5 * HOUR))
+    ts.append(1 * HOUR)
+    ts.append(int(1.5 * HOUR))
     ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
@@ -277,28 +317,33 @@ if __name__ == '__main__':
     # ts.append(1 * MONTH)
     # ts.append(2 * MONTH)
     ### distance threshold to be included
-    # ds.append(0)
+    ds.append(0)
     # ds.append(250)
     # ds.append(500)
-    ds.append(750)
+    # ds.append(750)
     # ds.append(1000)
     debug("--- Social inference started ---")
     for p in ps:
         for k in ks:
             debug('p:{}, k:{}'.format(p, k))
             ### Initialize variables
-            dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+            dataset, base_folder, working_folder, weekend_folder = init_folder(p, k)
             dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
             # ### Initialize dataset
             users, friends, venues = init(p, k)
             # ### Sorting users' checkins based on their timestamp, ascending ordering
             uids = sort_user_checkins(users)
+            if k == -1:
+                folder = base_folder
+            elif k == 0:
+                folder = weekend_folder
+            stat_lp = extract_popularity(folder, CHECKIN_FILE)
             for t in ts:
                 for d in ds:           
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
                     ### Feature extraction
                     stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                    evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
+                    evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_lp, p, k, t, d)
                     ### testing extracted csv
                     # testing(p, k, t, d, working_folder)
     debug("--- Social inference finished ---")

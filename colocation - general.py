@@ -95,7 +95,9 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
                     continue
                 ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
-                texts.append('{},{},{},{},{},{},{},{},{}'.format(user1.uid, user2.uid, c1.vid, t_diff, 1, c1.time, c2.time, lat_avg, lon_avg, d_diff, t_avg))
+                tt = '{},{},{},{},{},{},{},{},{},{},{}'.format(user1.uid, user2.uid, c1.vid, t_diff, 1, c1.time, c2.time, lat_avg, lon_avg, d_diff, t_avg)
+                if tt != '':
+                    texts.append(tt)
                 co = co_location.get(ss)
                 if co is None:
                     co = 0
@@ -201,7 +203,7 @@ if __name__ == '__main__':
     ### Gowalla - weekend - N core @ 2.1G
     ### Brightkite - all - 1 core : 2.1G
     ### Brightkite - all - N core @
-    ### Gowalla - all - 1 core : 3.1G
+    ### Gowalla - all - 1 core : 4G
     ### Gowalla - all - N core @
     ### For parallelization
     i_start = 0
@@ -218,11 +220,11 @@ if __name__ == '__main__':
     ts = []     ### Time threshold
     ds = []     ### Distance threshold
     ### project to be included
-    # ps.append(0)
-    ps.append(1)
+    ps.append(0)
+    # ps.append(1)
     ### mode to be included
-    ks.append(0)
-    # ks.append(-1)
+    # ks.append(0)
+    ks.append(-1)
     ### time threshold to be included
     HOUR  = 3600
     DAY   = 24 * HOUR
@@ -238,7 +240,8 @@ if __name__ == '__main__':
     # ts.append(1 * WEEK)
     # ts.append(2 * WEEK)
     # ts.append(1 * MONTH)
-    ts.append(2 * MONTH)
+    # ts.append(2 * MONTH)
+    ts.append(24 * MONTH)
     ### distance threshold to be included
     # ds.append(0)
     # ds.append(100)
@@ -265,7 +268,7 @@ if __name__ == '__main__':
                     # n_core = 2
                     # n_core = 3
                     # n_core = 4
-                    n_core = len(ss)
+                    # n_core = len(ss)
                     if n_core == 1:
                         debug('Single core')
                         for i in range(len(ss)):

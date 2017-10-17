@@ -61,11 +61,18 @@ def plot_friend_profile(filename):
 
     plot_histogram(n1)
     # plot_histogram(n2)
-    plot_histogram(dist)
-    plot_histogram(timediff)
+    # plot_histogram(dist)
+    # plot_histogram(timediff)
 
 def plot_histogram(X):
+    matplotlib.rcParams.update({'font.size': 18})
     plt.hist(X, bins=50, normed=True)
+    plt.axis([0, 1000, 0.00, 0.03])
+    frame1 = plt.gca()
+    frame1.axes.get_xaxis().set_ticks([0, 25, 50, 100, 200, 500, 1000])
+    frame1.axes.get_yaxis().set_ticks([0.00, 0.015, 0.03])
+    # plt.ylabel('Ratio of users')
+    # plt.xlabel('#Checkins')
     # formatter = FuncFormatter(to_percent)
     # Set the formatter
     # plt.gca().yaxis.set_major_formatter(formatter)
@@ -77,7 +84,7 @@ if __name__ == '__main__':
     0 : Extract friend profile
     1 : Plot friend profile
     """
-    MODE = 0
+    MODE = 1
     ### Global parameter for the experiments
     ps = []     ### Active project: 0 Gowalla, 1 Brightkite
     ks = []     ### Mode for top k users: 0 Weekend, -1 All users

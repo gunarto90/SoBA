@@ -6,21 +6,20 @@ from evaluation import *
 import time
 import numpy as np
 
-evaluation_filename = 'pgt_evaluation_p{}_k{}_t{}_d{}.csv'
+evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
 
 def testing(p, k, t, d, working_folder):
     filename = working_folder + evaluation_filename.format(p, k, t, d)
     texts = []
     if is_file_exists(filename) is True:
-        dataset = np.genfromtxt(filename, delimiter=',')
+        #create the training & test sets, skipping the header row with [1:]
+        dataset = np.genfromtxt(filename, delimiter=',')[1:]
         # print(dataset.shape)
         ncol = dataset.shape[1]
-        Xs = []
-        notes = ["All", "P0", "P", "PG", "PGT"]
-        X = dataset[:,1:ncol-1] # Remove index 0 (frequency)    # Using machine learning
+        X = dataset[:,2:ncol-1] # Remove uid 1 and uid 2
         y = dataset[:,ncol-1]
-        # debug(dataset[0:3])
-        assign = [[0], [1], [2], [3]]
+        notes = ["All", "frequency", "diversity", "duration", "stability", "F+D", "F+TD", "F+TS", "D+TD", "D+TS", "TD+TS", "F+D+TD", "F+D+TS", "F+TD+TS", "D+TD+TS"]
+        assign = [[0], [1], [2], [3], [0,1], [0,2],[ 0,3], [1,2], [1,3], [2,3], [0,1,2], [0,1,3], [0,2,3], [1,2,3]]
         texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
@@ -36,8 +35,8 @@ if __name__ == '__main__':
     ts = []     ### Time threshold
     ds = []     ### Distance threshold
     ### project to be included
-    ps.append(0)
-    # ps.append(1)
+    # ps.append(0)
+    ps.append(1)
     ### mode to be included
     ks.append(0)
     ks.append(-1)
@@ -64,7 +63,7 @@ if __name__ == '__main__':
     for p in ps:
         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
         for k in ks:
-            result_filename = working_folder + 'PGT_result_p{}_k{}.csv'.format(p,k)
+            result_filename = working_folder + 'SoC_result_p{}_k{}.csv'.format(p,k)
             debug(result_filename)
             remove_file_if_exists(result_filename)
             write_to_file(result_filename, header)

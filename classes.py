@@ -149,9 +149,11 @@ class Evaluation:
         self.diversity = 0.0
         self.duration  = 0.0
         self.stability = 0.0
+        self.popularity = 0.0
 
     def __str__(self):
         return '{},{},{},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.link)
+        # return '{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.popularity, self.link)
 
 class Colocation:
     # Old version

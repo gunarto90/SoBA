@@ -1,0 +1,11 @@
+{
+    "dataset": ["gowalla", "brightkite"],
+    "filenames" : {
+        "checkin"       : "checkin.csv",
+        "friend"        : "friend.csv",
+        "user"          : "user.csv",
+        "venue"         : "venue.csv",
+        "user_dist"     : "user_dist.csv",
+        "venue_cluster" : "venue_cluster.csv"
+    }
+}

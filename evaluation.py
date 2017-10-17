@@ -42,10 +42,6 @@ def generate_report(X, y, assign, notes, p, k, t, d):
                 name
             )
             texts.append(text)
-    for idx in range(len(X)):
-        Xi = Xs[idx]
-        debug('Evaluating {}'.format(notes[idx]))
-        
     return texts
 
 def sampling(X, y):

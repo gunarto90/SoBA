@@ -358,13 +358,13 @@ def merge(scores, friends, all_infer_link, i_start, i_finish, working_folder, co
         cond = sum(w) - w[0] > 0
         if cond is True:
             ### Frequency, Sum Personal, Max Personal, P + G, P + G + T, Link
-            texts.append('{},{},{},{},{}'.format(w[0], w[1], w[2], w[3], link))
+            texts.append('{},{},{},{},{},{}'.format(w[0], w[1], w[2], w[3], w[4], link))
         counter += 1
     write_to_file_buffered(working_folder + co_eval_file, texts)
 
 # Main function
 if __name__ == '__main__':
-    ### For parallelization
+    ### For parallelizationq
     starts = {}
     finish = {}
     starts[0] = [0, 10001, 30001, 55001]
@@ -374,7 +374,7 @@ if __name__ == '__main__':
     p = 0
     k = 0
     i_start = 0
-    i_finish = -1
+    i_finish = 35000
     write = True
 
     CO_DISTANCE = 500
@@ -440,7 +440,7 @@ if __name__ == '__main__':
         elif mode == 11:
             reduce(working_folder, p, k, mode)
     else:
-        modes = [0]
+        modes = [11]
         ps = [0]
         ks = [-1]
         ts = [1800, 3600, 5400, 7200]
@@ -466,7 +466,7 @@ if __name__ == '__main__':
                         ### extract personal density values
                         if mode == 1:
                             if n_core == 1:
-                                user_p = user_personal(users, venues, p, k, working_folder, write=False, i_start=i_start, i_finish=i_finish)
+                                user_p = user_personal(users, venues, p, k, working_folder, write=write, i_start=i_start, i_finish=i_finish)
                             else:
                                 user_p = Parallel(n_jobs=n_core)(delayed(user_personal)(users, venues, p, k, working_folder, write=write, i_start=ss[i], i_finish=ff[i]) for i in range(len(ss)))
                                 pass
