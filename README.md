@@ -2,6 +2,7 @@
 Social tie classification using location based social network data, implemented using Python.
 
 If you are interested to apply this work in your research or project, please cite the following work.
+
 Gunarto Sindoro Njoo, Min-Chia Kao, Kuo-Wei Hsu, Wen-Chih Peng: Exploring Check-in Data to Infer Social Ties in Location Based Social Networks. PAKDD (1) 2017: 460-471
 
 ## Dataset
