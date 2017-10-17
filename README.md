@@ -8,6 +8,8 @@ Gunarto Sindoro Njoo, Min-Chia Kao, Kuo-Wei Hsu, Wen-Chih Peng: Exploring Check-
 ## Dataset
 Dataset used in the experiments are obtained from LBSN data: Gowalla and Brighkite (http://snap.stanford.edu/data/).
 
+The processed dataset used throughout the SoBA experiments can be found in this link (http://bit.ly/pakdd2017-dataset-social).
+
 ### base.py
 The functions needed in other python files are provided here. It is a library for this project.
 
