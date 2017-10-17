@@ -3,9 +3,7 @@ http://bit.ly/pakdd2017-dataset-social
 
 PS: The original dataset provided from SNAP Stanford (http://snap.stanford.edu/data/index.html)
 
-#############################################
 ############### Description #################
-#############################################
 
 user.csv
 uid, row_uid, #checkins, row_checkins, #friends, row_friends
@@ -25,9 +23,7 @@ user_id, timestamp, latitude, longitude, venue_id
 venue.csv
 vid, latitude, longitude
 
-#############################################
 ################## All data #################
-#############################################
 
 @#Checkins
 Gowalla		: 6,442,727
@@ -54,9 +50,7 @@ Brightkite	: 428,156	(Only 388,180 ties among who have checkins)
 Gowalla		: 117
 Brightkite	: 400
 
-#############################################
 ############### Weekends data ###############
-############################################# 
 
 @#Checkins
 Gowalla		: 2,013,870 (out of all 6,442,727)	31.26%
