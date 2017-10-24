@@ -66,7 +66,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
         user1 = users.get(uid1)
         if counter % 1000 == 0:
             debug('{} of {} users ({:.3f}%)'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), out_file=True, out_stdio=False, callerid='Co-occurrence')
-        for j in range(i+1, i_finish):
+        for j in range(i+1, len(users)):
             uid2 = all_user[j]
             user2 = users.get(uid2)
             if uid1 == uid2:
