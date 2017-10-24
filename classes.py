@@ -117,6 +117,12 @@ class User:
                 continue
             self.dist[venue.cluster] += 1
 
+    def get_ncheckin(self):
+        return len(self.checkins)
+
+    def get_nfriend(self):
+        return len(self.friends)
+
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):

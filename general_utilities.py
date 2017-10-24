@@ -2,7 +2,7 @@ import os
 import math
 from datetime import datetime
 from datetime import date
-from pympler import asizeof
+# from pympler import asizeof
 from math import radians, cos, sin, asin, sqrt, pow, exp
 
 IS_DEBUG = True

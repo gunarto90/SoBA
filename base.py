@@ -9,6 +9,8 @@ base_folder = ''
 working_folder = '' 
 weekend_folder = ''
 
+CHECKIN_THRESHOLD = 10
+
 def init_variables():
     filename = 'variables.json'
     global dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER
@@ -146,6 +148,16 @@ def init_venues(file=None):
     debug('There are {} errors in venue file'.format(error))
     return venues
 
+def filter_users(users):
+    output = {k: v for k, v in users.items() if v.get_ncheckin() >= CHECKIN_THRESHOLD}
+    if IS_DEBUG:
+        print('Filtering users')
+        print(len(output))
+        print(len(users))
+    users.clear()
+    del users
+    return output
+
 def init(ACTIVE_PROJECT, topk):
     debug("Starting initialization")
     WEEKEND = False
@@ -179,6 +191,8 @@ def init(ACTIVE_PROJECT, topk):
     venues = init_venues(venue_file)
     users = init_checkins(venues, checkins_file)
     friends = init_friendships(users, friend_file)
+
+    users = filter_users(users)
     return users, friends, venues
 
 def sort_user_checkins(users):

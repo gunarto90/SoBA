@@ -199,12 +199,9 @@ if __name__ == '__main__':
     ### For parallelization
     i_start = 0
     i_finish = -1
+    chunksize = 5
     starts = {}
     finish = {}
-    starts[0] = [0, 10001, 30001, 55001]
-    finish[0] = [10000, 30000, 55000, -1]
-    starts[1] = [0, 3001, 8001, 15001, 30001]
-    finish[1] = [3000, 8000, 15000, 30000, -1]
     ### Global parameter for the experiments
     ps = []     ### Active project: 0 Gowalla, 1 Brightkite
     ks = []     ### Mode for top k users: 0 Weekend, -1 All users
@@ -212,19 +209,19 @@ if __name__ == '__main__':
     ds = []     ### Distance threshold
     ### project to be included
     ps.append(0)
-    # ps.append(1)
-    ### mode to be included
-    # ks.append(0)
+    ps.append(1)
+    ### mode to be included (0: weekend, -1: all)
+    ks.append(0)
     ks.append(-1)
     ### time threshold to be included
     HOUR  = 3600
     DAY   = 24 * HOUR
     WEEK  = 7 * DAY
     MONTH = 30 * DAY
-    ts.append(int(0.5 * HOUR))
-    ts.append(1 * HOUR)
+    # ts.append(int(0.5 * HOUR))
+    # ts.append(1 * HOUR)
     # ts.append(int(1.5 * HOUR))
-    # ts.append(2 * HOUR)
+    ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
     # ts.append(3 * DAY)
@@ -233,32 +230,42 @@ if __name__ == '__main__':
     # ts.append(1 * MONTH)
     # ts.append(2 * MONTH)
     ### distance threshold to be included
-    # ds.append(0)
+    ds.append(0)
     # ds.append(100)
     # ds.append(250)
     # ds.append(500)
-    ds.append(750)
+    # ds.append(750)
     # ds.append(1000)
     debug("--- Co-occurrence generation started ---")
-    for t in ts:
-        for d in ds:
-            for k in ks:
-                for p in ps:
+    for p in ps:
+        ### Initialize variables
+        dataset, base_folder, working_folder, weekend_folder = init_folder(p)
+        dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
+        for k in ks:
+            debug('p:{}, k:{}'.format(p, k))
+            # ### Initialize dataset
+            users, friends, venues = init(p, k)
+            # ### Sorting users' checkins based on their timestamp, ascending ordering
+            uids = sort_user_checkins(users)
+            # 16001
+            # 35390
+            starts[p] = list(map((lambda x: int(len(users)/chunksize*x + 1 if x > 0 else 0)), range(0,chunksize)))
+            finish[p] = list(map((lambda x: int(len(users)/chunksize*x)), range(1,chunksize+1)))
+            print(len(users))
+            print(starts)
+            print(finish)
+            ss =starts.get(p)
+            ff = finish.get(p)
+            # n_core = 1
+            # n_core = 2
+            # n_core = 3
+            n_core = 4
+            # n_core = len(ss)
+
+            for t in ts:
+                for d in ds:
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
-                    ### Initialize variables
-                    dataset, base_folder, working_folder, weekend_folder = init_folder(p)
-                    dataset, CHECKIN_FILE, FRIEND_FILE, USER_FILE, VENUE_FILE, USER_DIST, VENUE_CLUSTER = init_variables()
-                    # ### Initialize dataset
-                    users, friends, venues = init(p, k)
-                    # ### Sorting users' checkins based on their timestamp, ascending ordering
-                    uids = sort_user_checkins(users)
-                    ss =starts.get(p)
-                    ff = finish.get(p)
-                    n_core = 1
-                    # n_core = 2
-                    # n_core = 3
-                    # n_core = 4
-                    # n_core = len(ss)
+                    ### Mapping
                     if n_core == 1:
                         debug('Single core')
                         for i in range(len(ss)):
@@ -266,6 +273,7 @@ if __name__ == '__main__':
                     else:
                         debug('Number of core: {}'.format(n_core))
                         Parallel(n_jobs=n_core)(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
+                    ### Reducing
                     reducing(p, k, t, d, working_folder)
                     ### extracting features
                     # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
