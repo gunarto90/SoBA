@@ -19,8 +19,7 @@ def testing(p, k, t, d, working_folder):
         notes = ["All", "P0", "P", "PG", "PGT"]
         X = dataset[:,1:ncol-1] # Remove index 0 (frequency)    # Using machine learning
         y = dataset[:,ncol-1]
-        # debug(dataset[0:3])
-        assign = [[0], [1], [2], [3]]
+        assign = [[0,1,2,3], [0], [1], [2], [3]]
         texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
