@@ -37,7 +37,7 @@ if __name__ == '__main__':
     ds = []     ### Distance threshold
     ### project to be included
     ps.append(0)
-    # ps.append(1)
+    ps.append(1)
     ### mode to be included
     ks.append(0)
     ks.append(-1)

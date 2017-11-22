@@ -1,4 +1,5 @@
 import sys
+from general_utilities import *
 
 class Venue:
     def __init__(self, _id, _lat, _lon):
@@ -57,6 +58,12 @@ class Checkin:
     def __hash__(self):
         """Override the default hash behavior (that returns the id or the object)"""
         return hash(tuple(sorted(self.__dict__.items())))
+
+    def distance(self, other):
+        return haversine(self.lat, self.lon, other.lat, other.lon)
+
+    def is_close(self, other):
+        return self.distance(other) <= DISTANCE_CLOSE
 
 class Friend:
     def __init__(self, u1, u2):
@@ -158,8 +165,8 @@ class Evaluation:
         self.popularity = 0.0
 
     def __str__(self):
-        return '{},{},{},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.link)
-        # return '{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.popularity, self.link)
+        # return '{},{},{},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.link)
+        return '{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{}'.format(self.u1, self.u2, self.frequency, self.diversity, self.duration, self.stability, self.popularity, self.link)
 
 class Colocation:
     # Old version
@@ -177,7 +184,7 @@ class Colocation:
         self.t_avg = float(split[len(split)-1])
 
     def __str__(self):
-        return '{},{},{},{},{}'.format(self.u1, self.u2, self.vid, self.t_diff, self.t_avg)
+        return '{},{},{},{},{}'.format(self.u1, self.u2, self.vid, self.lat, self.lon, self.dist, self.t_diff, self.t_avg)
 
     def __gt__(self, other):
         return self.t_avg > other.t_avg

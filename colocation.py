@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import time
 import os
 import re
@@ -56,7 +57,7 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
         all_user.append(uid)
     counter = 0
     texts = []
-    texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg')
+    texts.append('user1,user2,vid,t_diff,frequency,time1,time2,t_avg,lat,lon,distance')
     # texts.append('user1,user2,lat,lon,t_diff,frequency,time1,time2,t_avg')
     if i_finish == -1:
         i_finish = len(all_user)
@@ -86,8 +87,8 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                     continue
                 t_diff = abs(c1.time - c2.time)
                 t_avg = (c1.time + c2.time)/2
-                # lat_avg = (c1.lat + c2.lat)/2
-                # lon_avg = (c1.lon + c2.lon)/2
+                lat_avg = (c1.lat + c2.lat)/2
+                lon_avg = (c1.lon + c2.lon)/2
                 d_diff = haversine(c1.lat, c1.lon, c2.lat, c2.lon)
                 if t_diff > t_threshold:
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
@@ -95,8 +96,8 @@ def co_occur(users, p, k, t_threshold, d_threshold, i_start, i_finish, working_f
                 if d_diff > d_threshold:
                     ic1, ic2 = next_co_param(c1, c2, ic1, ic2)
                     continue
-                ss = '{},{},{}'.format(user1.uid, user2.uid, c1.vid)
-                texts.append('{},{},{},{},{},{},{},{}'.format(user1.uid, user2.uid, c1.vid, t_diff, 1, c1.time, c2.time, t_avg))
+                ss = '{},{},{}'.format(user1.uid, user2.uid, min([c1.vid, c2.vid]))
+                texts.append('{},{},{},{},{},{},{},{},{},{},{}'.format(user1.uid, user2.uid, c1.vid, t_diff, 1, c1.time, c2.time, t_avg, lat_avg, lon_avg, d_diff))
                 co = co_location.get(ss)
                 if co is None:
                     co = 0
@@ -218,9 +219,9 @@ if __name__ == '__main__':
     DAY   = 24 * HOUR
     WEEK  = 7 * DAY
     MONTH = 30 * DAY
-    # ts.append(int(0.5 * HOUR))
-    # ts.append(1 * HOUR)
-    # ts.append(int(1.5 * HOUR))
+    ts.append(int(0.5 * HOUR))
+    ts.append(1 * HOUR)
+    ts.append(int(1.5 * HOUR))
     ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
@@ -247,20 +248,18 @@ if __name__ == '__main__':
             users, friends, venues = init(p, k)
             # ### Sorting users' checkins based on their timestamp, ascending ordering
             uids = sort_user_checkins(users)
-            # 16001
-            # 35390
-            starts[p] = list(map((lambda x: int(len(users)/chunksize*x + 1 if x > 0 else 0)), range(0,chunksize)))
-            finish[p] = list(map((lambda x: int(len(users)/chunksize*x)), range(1,chunksize+1)))
-            print(len(users))
-            print(starts)
-            print(finish)
+            starts[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x + 1 if x > 0 else 0)), range(0,CHUNK_SIZE)))
+            finish[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x)), range(1,CHUNK_SIZE+1)))
+            # print(len(users))
+            # print(starts)
+            # print(finish)
             ss =starts.get(p)
             ff = finish.get(p)
             # n_core = 1
             # n_core = 2
             # n_core = 3
-            n_core = 4
-            # n_core = len(ss)
+            # n_core = 4
+            n_core = len(ss)
 
             for t in ts:
                 for d in ds:
@@ -275,9 +274,4 @@ if __name__ == '__main__':
                         Parallel(n_jobs=n_core)(delayed(mapping)(users, p, k, t, d, working_folder, ss[i], ff[i]) for i in range(len(ss)))
                     ### Reducing
                     reducing(p, k, t, d, working_folder)
-                    ### extracting features
-                    # stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                    # evaluation(friends, stat_f, stat_d, stat_td, stat_ts, p, k, t, d)
-                    ### testing extracted csv
-                    # testing(p, k, t, d, working_folder)
     debug("--- Co-occurrence generation finished ---")

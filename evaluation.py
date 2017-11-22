@@ -2,9 +2,9 @@ from general_utilities import *
 from base import *
 from classes import *
 
-from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import EditedNearestNeighbours
-from imblearn.combine import SMOTEENN
+# from imblearn.over_sampling import SMOTE
+# from imblearn.under_sampling import EditedNearestNeighbours
+# from imblearn.combine import SMOTEENN
 
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.metrics import roc_curve, auc
@@ -24,7 +24,6 @@ def generate_report(X, y, assign, notes, p, k, t, d):
     for i in range(len(lists)):
         (Xi, yi) = lists[i]
         Xs = []
-        Xs.append(Xi)
         for arr in assign:
             X_indexed = Xi[:, arr]
             Xs.append(X_indexed)
@@ -52,13 +51,13 @@ def sampling(X, y):
     names.append('original')
 
     ### ovesampling
-    query_time = time.time()
-    pp = SMOTE(kind='regular')
-    X_pp, y_pp = pp.fit_sample(X, y)
-    lists.append((X_pp, y_pp))
-    names.append('over-SMOTE')
-    process_time = int(time.time() - query_time)
-    debug('Finished sampling SMOTE in {} seconds'.format(process_time))
+    # query_time = time.time()
+    # pp = SMOTE(kind='regular')
+    # X_pp, y_pp = pp.fit_sample(X, y)
+    # lists.append((X_pp, y_pp))
+    # names.append('over-SMOTE')
+    # process_time = int(time.time() - query_time)
+    # debug('Finished sampling SMOTE in {} seconds'.format(process_time))
 
     ### undersampling
     # query_time = time.time()
@@ -70,19 +69,19 @@ def sampling(X, y):
     # debug('Finished sampling ENN in {} seconds'.format(process_time))
     
     ### oversampling + undersampling
-    query_time = time.time()
-    pp = SMOTEENN()
-    X_pp, y_pp = pp.fit_sample(X, y)
-    lists.append((X_pp, y_pp))
-    names.append('over+under-SMOTE-ENN')
-    process_time = int(time.time() - query_time)
-    debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
+    # query_time = time.time()
+    # pp = SMOTEENN()
+    # X_pp, y_pp = pp.fit_sample(X, y)
+    # lists.append((X_pp, y_pp))
+    # names.append('over+under-SMOTE-ENN')
+    # process_time = int(time.time() - query_time)
+    # debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
     
     return lists, names
 
 def auc_score(X, y):
-    # cv = StratifiedKFold(n_splits=10)
-    cv = StratifiedKFold(n_splits=5)
+    cv = StratifiedKFold(n_splits=10)
+    # cv = StratifiedKFold(n_splits=5)
     # clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=1)
     clf = RandomForestClassifier(n_jobs=4)
 
@@ -95,13 +94,8 @@ def auc_score(X, y):
 
     total_ytrue = sum(y)
 
-    # debug(len(X))
-    # debug(len(y))
-
     i = 0
     for (train, test) in cv.split(X, y):
-        # debug(X[train][:3])
-        # debug(y[train][:3])
         fit = clf.fit(X[train], y[train])
         probas_ = fit.predict_proba(X[test])
         inference = fit.predict(X[test])
@@ -120,7 +114,6 @@ def auc_score(X, y):
         mean_precision += precision
         mean_recall += recall
         mean_f1 += f1
-        # debug(roc_auc)
         i += 1
     mean_tpr /= cv.get_n_splits(X, y)
     mean_tpr[-1] = 1.0

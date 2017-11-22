@@ -8,8 +8,8 @@ evaluation_filename = 'evaluation_p{}_k{}_t{}_d{}.csv'
 
 def write_evaluation(summaries, p, k, t, d):
     texts = []
-    texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
-    # texts.append('uid1,uid2,frequency,diversity,duration,stability,popularity,link')
+    # texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
+    texts.append('uid1,uid2,frequency,diversity,duration,stability,popularity,link')
     for friend, evaluation in summaries.items():
         if evaluation.diversity == 0 and evaluation.duration == 0 and evaluation.stability == 0 and evaluation.popularity == 0:
             continue
@@ -56,7 +56,7 @@ def extract_popularity(working_folder, CHECKIN_FILE):
         stat_lp[vid] = ent
     return stat_lp
 
-def extraction(p, k, t, d, working_folder):
+def extraction(p, k, t, d, working_folder, stat_lp):
     stat_f = {}     # frequency
     stat_d = {}     # diversity
     stat_ld = {}    # co-occurrence between user in each venue (distinct)
@@ -65,6 +65,7 @@ def extraction(p, k, t, d, working_folder):
     stat_t = {}     # time diff on co-occurrence
     stat_td = {}    # duration
     stat_ts = {}    # stability
+    stat_ps = {}    # popularity score
     u_xy = {}       # u_xy = Average meeting time = delta_xy / |Theta_xy|
     week_num = {}   # Save a list of week number of co-occurrence between users
     ### Extract data from file
@@ -131,6 +132,21 @@ def extraction(p, k, t, d, working_folder):
         #         weeks[tanggal] = count
         # for w in sorted(weeks, key=weeks.get, reverse=True):
         #     debug('{}\t{}'.format(w, weeks[w]), clean=True)
+
+        ### Extract popularity
+        for friend, dictionary in stat_l.items():
+            found = stat_ps.get(friend)
+            if found is None:
+                found = []
+            for vid, x in dictionary.items():
+                ent = stat_lp.get(int(vid))
+                if ent is None:
+                    continue
+                found.append(ent)
+            stat_ps[friend] = found
+        for friend, arr in stat_ps.items():
+            stat_ps[friend] = sum(arr)/len(arr)
+
         ### Extract diversity
         for friend, dictionary in stat_l.items():
             found = stat_d.get(friend)
@@ -139,6 +155,7 @@ def extraction(p, k, t, d, working_folder):
             for vid, x in dictionary.items():
                 found.append(x)
             stat_d[friend] = found
+
         ### Extract duration
         duration = 0
         max_duration = 0
@@ -197,27 +214,35 @@ def extraction(p, k, t, d, working_folder):
 
         ### Debug
         ### Frequency
+        # debug('Frequency')
         # for friend, frequency in stat_f.items():
         #     debug('{},{}'.format(friend, frequency), clean=True)
-        ### Entropy (Diversity)
+        # ## Entropy (Diversity)
+        # debug('Diversity')
         # for friend, data in stat_d.items():
         #     debug('{},{}'.format(friend, entropy(data)), clean=True)
-        ### Duration
+        # ## Duration
+        # debug('Duration')
         # for friend, duration in stat_td.items():
         #     debug('{}\t{}'.format(friend, duration))
-        ### Stability
+        # ## Stability
+        # debug('Stability')
         # for friend, weight in stat_ts.items():
         #     debug('{},{}'.format(friend, weight), clean=True)
+        ## Popularity
+        # debug('Popularity')
+        # for friend, entropies in stat_ps.items():
+        #     debug('{},{}'.format(friend, entropies), clean=True)
 
         debug('Finished extracting co-occurrence features', out_file=False)
 
-        return stat_f, stat_d, stat_td, stat_ts
+        return stat_f, stat_d, stat_td, stat_ts, stat_ps
     except Exception as ex:
         debug('File not found: {}'.format(working_folder + fname))
         debug(ex)
-        return None, None, None, None
+        return None, None, None, None, None
 
-def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_lp, p, k, t, d):
+def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_ps, p, k, t, d):
     summaries = {}
 
     if stat_f is None or stat_d is None or stat_td is None or stat_ts is None:
@@ -229,12 +254,21 @@ def evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_lp, p, k, t, d):
     max_val = max(stat_f.values())
     for friend, data in stat_f.items():
         stat_f[friend] = float(data) / max_val
-    for friend, data in stat_f.items():
         found = summaries.get(friend)
         if found is None:
             found = Evaluation(friend.u1, friend.u2)
         found.frequency = data
         summaries[friend] = found
+
+    ### Popularity
+    max_val = max(stat_ps.values())
+    for friend, data in stat_ps.items():
+        norm_popularity = float(data) / max_val
+        stat_ps[friend] = norm_popularity
+        found = summaries.get(friend)
+        if found is None:
+            found = Evaluation(friend.u1, friend.u2)
+        found.popularity = norm_popularity
 
     ### Diversity
     max_val = 0
@@ -332,7 +366,7 @@ if __name__ == '__main__':
             # ### Initialize dataset
             users, friends, venues = init(p, k)
             # ### Sorting users' checkins based on their timestamp, ascending ordering
-            uids = sort_user_checkins(users)
+            # uids = sort_user_checkins(users)
             if k == -1:
                 folder = base_folder
             elif k == 0:
@@ -342,8 +376,6 @@ if __name__ == '__main__':
                 for d in ds:           
                     debug('p:{}, k:{}, t:{}, d:{}'.format(p, k, t, d))
                     ### Feature extraction
-                    stat_f, stat_d, stat_td, stat_ts = extraction(p, k, t, d, working_folder)
-                    evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_lp, p, k, t, d)
-                    ### testing extracted csv
-                    # testing(p, k, t, d, working_folder)
+                    stat_f, stat_d, stat_td, stat_ts, stat_ps = extraction(p, k, t, d, working_folder, stat_lp)
+                    evaluation(friends, stat_f, stat_d, stat_td, stat_ts, stat_ps, p, k, t, d)
     debug("--- Social inference finished ---")

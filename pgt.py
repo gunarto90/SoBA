@@ -44,6 +44,8 @@ def user_personal(users, venues, p, k, working_folder, write=True, i_start=0, i_
         all_user.append(uid)
     if i_finish == -1:
         i_finish = len(all_user)
+    if i_finish > len(all_user):
+        i_finish = len(all_user)
     for i in range(i_start, i_finish):
         uid = all_user[i]
         user = users.get(uid)
@@ -264,15 +266,24 @@ def extraction(working_folder, p, k, t, d, friends, co_eval_file, p_density=None
     process_time = int(time.time() - query_time)
     debug('Extracted {1} co-occurrences in {0} seconds'.format(process_time, counter), out_file=False)
     # write_to_file_buffered(co_eval_file, texts)
-    debug('{}'.format(len(co_p), out_file=False))
-    debug('Max p {}'.format(max(co_p.values())))
-    debug('Min p {}'.format(min(co_p.values())))
-    debug('{}'.format(len(co_g), out_file=False))
-    debug('Max g {}'.format(max(co_g.values())))
-    debug('Min g {}'.format(min(co_g.values())))
-    debug('{}'.format(len(co_t), out_file=False))
-    debug('Max t {}'.format(max(co_t.values())))
-    debug('Min t {}'.format(min(co_t.values())))
+    try:
+        debug('{}'.format(len(co_p), out_file=False))
+        debug('Max p {}'.format(max(co_p.values())))
+        debug('Min p {}'.format(min(co_p.values())))
+    except:
+        pass
+    try:
+        debug('{}'.format(len(co_g), out_file=False))
+        debug('Max g {}'.format(max(co_g.values())))
+        debug('Min g {}'.format(min(co_g.values())))
+    except:
+        pass
+    try:
+        debug('{}'.format(len(co_t), out_file=False))
+        debug('Max t {}'.format(max(co_t.values())))
+        debug('Min t {}'.format(min(co_t.values())))
+    except:
+        pass
     # debug('{}'.format(len(co_pgt), out_file=False))
     # debug('Max pgt {}'.format(max(co_pgt.values())))
     # debug('Min pgt {}'.format(min(co_pgt.values())))
@@ -367,17 +378,14 @@ if __name__ == '__main__':
     ### For parallelizationq
     starts = {}
     finish = {}
-    starts[0] = [0, 10001, 30001, 55001]
-    finish[0] = [10000, 30000, 55000, -1]
-    starts[1] = [0, 3001, 8001, 15001, 30001]
-    finish[1] = [3000, 8000, 15000, 30000, -1]
+    chunksize = 5
     p = 0
     k = 0
     i_start = 0
-    i_finish = 35000
+    i_finish = -1
     write = True
 
-    CO_DISTANCE = 500
+    CO_DISTANCE = 0
     CO_TIME = 3600
     """
     mode 0: run all factor using files (for personal data and global data)
@@ -440,11 +448,17 @@ if __name__ == '__main__':
         elif mode == 11:
             reduce(working_folder, p, k, mode)
     else:
-        modes = [11]
-        ps = [0]
-        ks = [-1]
-        ts = [1800, 3600, 5400, 7200]
-        ds = [0, 250, 500, 750]
+        # modes = [11]
+        # ps = [0]
+        # ks = [-1]
+        # ts = [1800, 3600, 5400, 7200]
+        # ds = [0, 250, 500, 750]
+        # modes = [1,2, 11, 3, 4]
+        modes = [0]
+        ps = [1]
+        ks = [0]
+        ts = [7200]
+        ds = [0]
         for mode in modes:
             debug('Mode: {}'.format(mode), out_file=False)
             if mode == 1 or mode == 2:
@@ -455,12 +469,14 @@ if __name__ == '__main__':
                         users, friends, venues = init(p, k)
                         uids = sort_user_checkins(users)
                         ### Parallelization
+                        starts[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x + 1 if x > 0 else 0)), range(0,CHUNK_SIZE)))
+                        finish[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x)), range(1,CHUNK_SIZE+1)))
                         ss = starts.get(p)
                         ff = finish.get(p)
-                        n_core = 1
+                        # n_core = 1
                         # n_core = 2
                         # n_core = 3
-                        # n_core = 4
+                        n_core = 4
                         # n_core = len(ss)
                         # debug('Number of core: {}'.format(n_core))
                         ### extract personal density values
@@ -485,10 +501,10 @@ if __name__ == '__main__':
                 ff = []
                 for p in ps:
                     ### Parallelization
-                    n_core = 1
+                    # n_core = 1
                     # n_core = 2
                     # n_core = 3
-                    # n_core = 4
+                    n_core = 4
                     # n_core = 8
                     # n_core = len(ss)
                     debug('Number of core: {}'.format(n_core))

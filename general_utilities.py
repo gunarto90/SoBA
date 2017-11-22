@@ -6,6 +6,9 @@ from datetime import date
 from math import radians, cos, sin, asin, sqrt, pow, exp
 
 IS_DEBUG = True
+CHUNK_SIZE = 5
+MIN_CHECKINS = 10
+DISTANCE_CLOSE = 200
 
 def show_object_size(obj, name):
     size = asizeof.asizeof(obj)
