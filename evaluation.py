@@ -2,9 +2,9 @@ from general_utilities import *
 from base import *
 from classes import *
 
-# from imblearn.over_sampling import SMOTE
-# from imblearn.under_sampling import EditedNearestNeighbours
-# from imblearn.combine import SMOTEENN
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import EditedNearestNeighbours
+from imblearn.combine import SMOTEENN
 
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.metrics import roc_curve, auc
@@ -20,19 +20,20 @@ import time
 
 def generate_report(X, y, assign, notes, p, k, t, d):
     texts = []
-    lists, names = sampling(X, y)
-    for i in range(len(lists)):
-        (Xi, yi) = lists[i]
+    # names = ['original']
+    names = ['original', 'over', 'under', 'combo']
+
+    for i in range(len(names)):
         Xs = []
         for arr in assign:
-            X_indexed = Xi[:, arr]
+            X_indexed = X[:, arr]
             Xs.append(X_indexed)
         name = names[i]
         debug('Evaluating {}'.format(name))
         for idx in range(len(Xs)):
-            Xii = Xs[idx]
+            Xi = Xs[idx]
             debug('Feature {}'.format(notes[idx]))
-            mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(Xii, yi)
+            mean_auc, mean_precision, mean_recall, mean_f1, total_ytrue = auc_score(Xi, y, name)
             text = '{},{},{},{},{:.9f},{:.9f},{:.9f},{:.9f},{},{},{},{}'.format(
                 p, k, t, d, 
                 mean_auc, mean_precision, mean_recall, mean_f1, 
@@ -43,45 +44,38 @@ def generate_report(X, y, assign, notes, p, k, t, d):
             texts.append(text)
     return texts
 
-def sampling(X, y):
-    debug('Started sampling')
-    lists = []
-    names = []
-    lists.append((X, y))
-    names.append('original')
-
+def sampling(X, y, ptype='original'):
+    if ptype == 'original':
+        return (X, y)
     ### ovesampling
-    # query_time = time.time()
-    # pp = SMOTE(kind='regular')
-    # X_pp, y_pp = pp.fit_sample(X, y)
-    # lists.append((X_pp, y_pp))
-    # names.append('over-SMOTE')
-    # process_time = int(time.time() - query_time)
-    # debug('Finished sampling SMOTE in {} seconds'.format(process_time))
-
+    elif ptype == 'over':
+        query_time = time.time()
+        pp = SMOTE(kind='regular')
+        X_pp, y_pp = pp.fit_sample(X, y)
+        process_time = int(time.time() - query_time)
+        # debug('Finished sampling SMOTE in {} seconds'.format(process_time))
+        return (X_pp, y_pp)
     ### undersampling
-    # query_time = time.time()
-    # pp = EditedNearestNeighbours()
-    # X_pp, y_pp = pp.fit_sample(X, y)
-    # lists.append((X_pp, y_pp))
-    # names.append('under-ENN')
-    # process_time = int(time.time() - query_time)
-    # debug('Finished sampling ENN in {} seconds'.format(process_time))
-    
+    elif ptype == 'under':
+        query_time = time.time()
+        pp = EditedNearestNeighbours()
+        X_pp, y_pp = pp.fit_sample(X, y)
+        process_time = int(time.time() - query_time)
+        # debug('Finished sampling ENN in {} seconds'.format(process_time))
+        return (X_pp, y_pp)
     ### oversampling + undersampling
-    # query_time = time.time()
-    # pp = SMOTEENN()
-    # X_pp, y_pp = pp.fit_sample(X, y)
-    # lists.append((X_pp, y_pp))
-    # names.append('over+under-SMOTE-ENN')
-    # process_time = int(time.time() - query_time)
-    # debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
-    
-    return lists, names
+    elif ptype == 'combo':    
+        query_time = time.time()
+        pp = SMOTEENN()
+        X_pp, y_pp = pp.fit_sample(X, y)
+        process_time = int(time.time() - query_time)
+        # debug('Finished sampling SMOTE-ENN in {} seconds'.format(process_time))
+        return (X_pp, y_pp)
+    return (X, y)
 
-def auc_score(X, y):
-    cv = StratifiedKFold(n_splits=10)
-    # cv = StratifiedKFold(n_splits=5)
+def auc_score(X, y, ptype='original'):
+    # cv = StratifiedKFold(n_splits=10)
+    cv = StratifiedKFold(n_splits=5)
     # clf = RandomForestClassifier(n_estimators=10, max_depth=None, min_samples_split=3, random_state=0, n_jobs=1)
     clf = RandomForestClassifier(n_jobs=4)
 
@@ -96,7 +90,8 @@ def auc_score(X, y):
 
     i = 0
     for (train, test) in cv.split(X, y):
-        fit = clf.fit(X[train], y[train])
+        X_pp, y_pp = sampling(X[train], y[train], ptype)
+        fit = clf.fit(X_pp, y_pp)
         probas_ = fit.predict_proba(X[test])
         inference = fit.predict(X[test])
         # Compute ROC curve and area the curve
