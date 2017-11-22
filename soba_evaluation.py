@@ -43,16 +43,16 @@ if __name__ == '__main__':
     ts = []     ### Time threshold
     ds = []     ### Distance threshold
     ### project to be included
-    ps.append(0)
+    # ps.append(0)
     ps.append(1)
     ### mode to be included
     ks.append(0)
-    ks.append(-1)
+    # ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))
-    ts.append(1 * HOUR)
-    ts.append(int(1.5 * HOUR))
-    ts.append(2 * HOUR)
+    # ts.append(1 * HOUR)
+    # ts.append(int(1.5 * HOUR))
+    # ts.append(2 * HOUR)
     # ts.append(1 * DAY)
     # ts.append(2 * DAY)
     # ts.append(3 * DAY)
