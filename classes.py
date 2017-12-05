@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 from general_utilities import *
 
@@ -79,8 +80,10 @@ class Friend:
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        return (self.u1 == other.u1 and self.u2 == other.u2) or (self.u1 == other.u2 and self.u2 == other.u1)
+            # return self.__dict__ == other.__dict__
+            return (self.u1 == other.u1 and self.u2 == other.u2) or (self.u1 == other.u2 and self.u2 == other.u1)
+        else:
+            return False
 
     def __ne__(self, other):
         """Define a non-equality test"""
@@ -178,10 +181,10 @@ class Colocation:
         self.u2 = int(split[1])
         self.vid = int(split[2])
         self.t_diff = int(split[3])
-        self.lat = float(split[len(split)-4])
-        self.lon = float(split[len(split)-3])
-        self.dist = float(split[len(split)-2])
-        self.t_avg = float(split[len(split)-1])
+        self.t_avg = float(split[7])
+        self.lat = float(split[8])
+        self.lon = float(split[9])
+        self.dist = float(split[10])
 
     def __str__(self):
         return '{},{},{},{},{}'.format(self.u1, self.u2, self.vid, self.lat, self.lon, self.dist, self.t_diff, self.t_avg)
