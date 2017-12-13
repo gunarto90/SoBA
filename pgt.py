@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from general_utilities import *
 from base import *
 from classes import *
@@ -233,8 +234,10 @@ def extraction(working_folder, p, k, t, d, friends, co_eval_file, p_density=None
             found = prev_co.get(friend)
             if found is None:
                 wt = 1
+                # debug('No temporal data found')
             else:
                 td = abs(found-t_avg)/3600 ### time difference in hour
+                # debug('Found: {}, t_avg: {}, td: {}'.format(found, t_avg, td))
                 if td <= 1:
                     wt = 1
                 else:
@@ -356,20 +359,24 @@ def merge(scores, friends, all_infer_link, i_start, i_finish, working_folder, co
     texts = []
     if i_finish == -1:
         i_finish = len(all_infer_link)
+    # debug('Merge dataset : {} -- {}'.format(i_start, i_finish))
     for i in range(i_start, i_finish):
         if counter % 10000 == 0:
             debug('Processed {} of {} friends [{:.3f}%]'.format(i, i_finish, float(counter)*100/(i_finish-i_start)), callerid='PGT Merge', out_file=True, out_stdio=False)
         fi = all_infer_link[i]
+        ### Eliminates all instances which only have 1 co-location event
+        if scores[0][fi] <= 1:
+            continue
         link = friends.get(fi)
         if link is None:
             link = 0
         w = []
         for i in range(len(scores)):
             w.append(scores[i].get(fi))
-        cond = sum(w) - w[0] > 0
-        if cond is True:
+        # cond = sum(w) - w[0] > 0
+        # if cond is True:
             ### Frequency, Sum Personal, Max Personal, P + G, P + G + T, Link
-            texts.append('{},{},{},{},{},{}'.format(w[0], w[1], w[2], w[3], w[4], link))
+        texts.append('{},{},{},{},{},{},{},{}'.format(fi.u1, fi.u2, w[0], w[1], w[2], w[3], w[4], link))
         counter += 1
     write_to_file_buffered(working_folder + co_eval_file, texts)
 
@@ -378,7 +385,6 @@ if __name__ == '__main__':
     ### For parallelizationq
     starts = {}
     finish = {}
-    chunksize = 5
     p = 0
     k = 0
     i_start = 0
@@ -451,13 +457,15 @@ if __name__ == '__main__':
         # modes = [11]
         # ps = [0]
         # ks = [-1]
-        # ts = [1800, 3600, 5400, 7200]
+        ts = [1800, 3600, 5400, 7200]
         # ds = [0, 250, 500, 750]
-        # modes = [1,2, 11, 3, 4]
-        modes = [0]
-        ps = [1]
-        ks = [0]
-        ts = [7200]
+        # modes = [1, 2, 11, 3]
+        # modes = [0]
+        modes = [1, 2, 11, 3, 4]
+        ps = [0]
+        # ks = [0]
+        ks = [-1]
+        # ts = [3600]
         ds = [0]
         for mode in modes:
             debug('Mode: {}'.format(mode), out_file=False)
@@ -469,15 +477,15 @@ if __name__ == '__main__':
                         users, friends, venues = init(p, k)
                         uids = sort_user_checkins(users)
                         ### Parallelization
-                        starts[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x + 1 if x > 0 else 0)), range(0,CHUNK_SIZE)))
+                        starts[p] = list(map((lambda x: (int(len(users)/CHUNK_SIZE*x) + 1 if x > 0 else 0)), range(0,CHUNK_SIZE)))
                         finish[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x)), range(1,CHUNK_SIZE+1)))
                         ss = starts.get(p)
                         ff = finish.get(p)
                         # n_core = 1
                         # n_core = 2
                         # n_core = 3
-                        n_core = 4
-                        # n_core = len(ss)
+                        # n_core = 4
+                        n_core = len(ss)
                         # debug('Number of core: {}'.format(n_core))
                         ### extract personal density values
                         if mode == 1:
@@ -506,7 +514,6 @@ if __name__ == '__main__':
                     # n_core = 3
                     n_core = 4
                     # n_core = 8
-                    # n_core = len(ss)
                     debug('Number of core: {}'.format(n_core))
                     for k in ks:
                         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
@@ -517,9 +524,13 @@ if __name__ == '__main__':
                         ### personal
                         if mode == 3 or mode == 0:
                             p_density = pgt_personal(working_folder, p, k)
+                            if mode == 3:
+                                continue
                         ### global
                         if mode == 4 or mode == 0:
                             g_entropy = pgt_global(working_folder, p, k)
+                            if mode == 4:
+                                continue
                         for t in ts:
                             for d in ds:
                                 if is_file_exists(working_folder + co_raw_filename.format(p,k,t,d)) is False:
@@ -537,7 +548,7 @@ if __name__ == '__main__':
                                     if i == n_core - 1:
                                         ff.append(len(all_infer_link))
                                     else:
-                                        ff.append((i+1) * chunk_size + 1)
+                                        ff.append((i+1) * chunk_size)
                                 # debug(len(all_infer_link))
                                 # debug(ss)
                                 # debug(ff)
@@ -551,5 +562,7 @@ if __name__ == '__main__':
                                 colocations.clear()
                                 for i in range(len(scores)):
                                     scores[i].clear()
+                                ss.clear()
+                                ff.clear()
                         friends.clear()
     debug('PGT finished')

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from general_utilities import *
 from base import *
 from classes import *
@@ -14,20 +15,24 @@ def testing(p, k, t, d, working_folder):
     if is_file_exists(filename) is True:
         #create the training & test sets, skipping the header row with [1:]
         dataset = np.genfromtxt(filename, delimiter=',')[1:]
-        # print(dataset.shape)
         ncol = dataset.shape[1]
         X = dataset[:,2:ncol-1] # Remove uid 1 and uid 2
         y = dataset[:,ncol-1]
-        print(X.shape)
-        print(y.shape)
         ### PAKDD 2017 Submission
-        # notes = ["All", "frequency", "diversity", "duration", "stability", "F+D", "F+TD", "F+TS", "D+TD", "D+TS", "TD+TS", "F+D+TD", "F+D+TS", "F+TD+TS", "D+TD+TS"]
+        # notes = ["SCI", "frequency", "diversity", "duration", "stability", "F+D", "F+TD", "F+TS", "D+TD", "D+TS", "TD+TS", "F+D+TD", "F+D+TS", "F+TD+TS", "D+TD+TS"]
         # assign = [[0,1,2,3], [0], [1], [2], [3], [0,1], [0,2],[ 0,3], [1,2], [1,3], [2,3], [0,1,2], [0,1,3], [0,2,3], [1,2,3]]
+        ### PAKDD 2017 Submission (All)
+        # notes = ['SCI']
+        # assign = [ [0,1,2,3] ]
         ## New Feature added (Popularity)
-        notes = ['All', 'Frequency', 'Diversity', 'Duration', 'Stability', 'Popularity', 'F+D', 'F+TD', 'F+TS', 'F+P', 'D+TD', 'D+TS', 'D+P', 'TD+TS', 'TD+P', 'TS+P', 'F+D+TD', 'F+D+TS', 'F+D+P', 'F+TD+TS', 'F+TD+P', 'F+TS+P', 'D+TD+TS', 'D+TD+P', 'D+TS+P', 'TD+TS+P', 'F+D+TD+TS', 'F+D+TD+P', 'F+D+TS+P', 'F+TD+TS+P', 'D+TD+TS+P']
-        assign = [ [0,1,2,3,4], [0], [1], [2], [3], [4], [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4]]
-        print(len(notes))
-        print(len(assign))
+        notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability', 'Popularity', 'F+D', 'F+TD', 'F+TS', 'F+P', 'D+TD', 'D+TS', 'D+P', 'TD+TS', 'TD+P', 'TS+P', 'F+D+TD', 'F+D+TS', 'F+D+P', 'F+TD+TS', 'F+TD+P', 'F+TS+P', 'D+TD+TS', 'D+TD+P', 'D+TS+P', 'TD+TS+P', 'F+D+TD+TS', 'F+D+TD+P', 'F+D+TS+P', 'F+TD+TS+P', 'D+TD+TS+P', 'SCI']
+        assign = [ [0,1,2,3,4], [0], [1], [2], [3], [4], [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4],  [0,1,2,3] ]
+        ### Only All features
+        # notes = ['SCI+']
+        # assign = [ [0,1,2,3,4] ]
+        ### SCI and SCI+
+        # notes = ['SCI+', 'SCI']
+        # assign = [ [0,1,2,3,4], [0,1,2,3] ]
         texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
@@ -44,9 +49,9 @@ if __name__ == '__main__':
     ds = []     ### Distance threshold
     ### project to be included
     ps.append(0)
-    ps.append(1)
+    # ps.append(1)
     ### mode to be included
-    ks.append(0)
+    # ks.append(0)
     ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))
@@ -71,7 +76,7 @@ if __name__ == '__main__':
     for p in ps:
         dataset, base_folder, working_folder, weekend_folder = init_folder(p)
         for k in ks:
-            result_filename = working_folder + 'SoC_result_p{}_k{}.csv'.format(p,k)
+            result_filename = working_folder + 'SCI_result_p{}_k{}.csv'.format(p,k)
             debug(result_filename)
             remove_file_if_exists(result_filename)
             write_to_file(result_filename, header)

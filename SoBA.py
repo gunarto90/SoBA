@@ -11,8 +11,12 @@ def write_evaluation(summaries, p, k, t, d):
     # texts.append('uid1,uid2,frequency,diversity,duration,stability,link')
     texts.append('uid1,uid2,frequency,diversity,duration,stability,popularity,link')
     for friend, evaluation in summaries.items():
-        if evaluation.diversity == 0 and evaluation.duration == 0 and evaluation.stability == 0 and evaluation.popularity == 0:
+        ### Eliminates all instances which only have 1 co-location event
+        if evaluation.frequency <= 1:
             continue
+        ### Limit only "correct" data
+        # if evaluation.diversity == 0 and evaluation.duration == 0 and evaluation.stability == 0 and evaluation.popularity == 0:
+        #     continue
         texts.append(str(evaluation))
     filename = working_folder + evaluation_filename.format(p, k, t, d)
     remove_file_if_exists(filename)
@@ -334,9 +338,9 @@ if __name__ == '__main__':
 
     ### project to be included
     ps.append(0)
-    ps.append(1)
+    # ps.append(1)
     ### mode to be included
-    ks.append(0)
+    # ks.append(0)
     ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))

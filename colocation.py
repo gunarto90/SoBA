@@ -208,12 +208,6 @@ if __name__ == '__main__':
     ks = []     ### Mode for top k users: 0 Weekend, -1 All users
     ts = []     ### Time threshold
     ds = []     ### Distance threshold
-    ### project to be included
-    ps.append(0)
-    ps.append(1)
-    ### mode to be included (0: weekend, -1: all)
-    ks.append(0)
-    ks.append(-1)
     ### time threshold to be included
     HOUR  = 3600
     DAY   = 24 * HOUR
@@ -237,6 +231,35 @@ if __name__ == '__main__':
     # ds.append(500)
     # ds.append(750)
     # ds.append(1000)
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"p:k:",["project=","topk="])
+    except getopt.GetoptError:
+        err_msg = 'colocation.py -p <<0 gowalla / 1 brightkite>> -k <0 Weekend, -1 ALL>'
+        debug(err_msg, 'opt error')
+        sys.exit(2)
+    if len(opts) > 0:
+        for opt, arg in opts:
+            if opt in ("-p", "--project"):
+                p = int(arg)
+                ps.append(p)
+            elif opt in ("-k", "--topk"):
+                k = int(arg)
+                ks.append(k)
+        print('Parameterized settings')
+    if len(ps) == 0:
+        ### project to be included
+        # ps.append(0)
+        ps.append(1)
+        print('Default settings for p')
+    if len(ks) == 0:
+        ### mode to be included (0: weekend, -1: all)
+        ks.append(0)
+        ks.append(-1)
+        print('Default settings for k')
+    print('Projects: {}'.format(ps))
+    print('Topk: {}'.format(ks))
+    print('Time: {}'.format(ts))
+    print('Distance: {}'.format(ds))
     debug("--- Co-occurrence generation started ---")
     for p in ps:
         ### Initialize variables
@@ -250,9 +273,9 @@ if __name__ == '__main__':
             uids = sort_user_checkins(users)
             starts[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x + 1 if x > 0 else 0)), range(0,CHUNK_SIZE)))
             finish[p] = list(map((lambda x: int(len(users)/CHUNK_SIZE*x)), range(1,CHUNK_SIZE+1)))
-            # print(len(users))
-            # print(starts)
-            # print(finish)
+            print(len(users))
+            print(starts)
+            print(finish)
             ss =starts.get(p)
             ff = finish.get(p)
             # n_core = 1

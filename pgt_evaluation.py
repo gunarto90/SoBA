@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from general_utilities import *
 from base import *
 from classes import *
@@ -16,10 +17,20 @@ def testing(p, k, t, d, working_folder):
         # print(dataset.shape)
         ncol = dataset.shape[1]
         Xs = []
-        notes = ["All", "P0", "P", "PG", "PGT"]
-        X = dataset[:,1:ncol-1] # Remove index 0 (frequency)    # Using machine learning
+        X = dataset[:,3:ncol-1] # Remove index 0 and 1 (uid 1 and uid2) also frequency (index 2)
         y = dataset[:,ncol-1]
+        ### PGT features and PGT+
+        notes = ["PGT+", "P0", "P", "PG", "PGT"]
         assign = [[0,1,2,3], [0], [1], [2], [3]]
+        ### PGT and PGT+
+        # notes = ["PGT+", "PGT"]
+        # assign = [[0,1,2,3], [3]]
+        ### Only PGT+
+        # notes = ["PGT+"]
+        # assign = [[0,1,2,3]]
+        ### Only PGT
+        # notes = ["PGT"]
+        # assign = [[3]]
         texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
@@ -36,9 +47,9 @@ if __name__ == '__main__':
     ds = []     ### Distance threshold
     ### project to be included
     ps.append(0)
-    ps.append(1)
+    # ps.append(1)
     ### mode to be included
-    ks.append(0)
+    # ks.append(0)
     ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import math
 from datetime import datetime
@@ -6,7 +7,7 @@ from datetime import date
 from math import radians, cos, sin, asin, sqrt, pow, exp
 
 IS_DEBUG = True
-CHUNK_SIZE = 5
+CHUNK_SIZE = 4
 MIN_CHECKINS = 10
 DISTANCE_CLOSE = 200
 
