@@ -22,6 +22,19 @@ Co-location generator, the first phase in our work, generating the co-location b
 ### colocation_general.py
 Similar with "colocation.py" but accept general location distance (instead of the same venue id). But this version is still in beta and might have some bugs.
 
+### colocation_filter.py 
+This code is intended to generate a new check-in and friend dataset based on the users who have at least 2 co-location with other users (Useful for testing the CCS2017 method)
+@inproceedings{BHPZ17,
+author = {Michael Backes and Mathias Humbert and Jun Pang and Yang Zhang},
+title = {walk2friends: Inferring Social Links from Mobility Profiles.},
+booktitle = {Proceedings of the 24th ACM SIGSAC Conference on Computer and Communications Security (CCS)},
+year = {2017},
+publisher = {ACM}
+}
+
+### extract_checkin.py
+Similar to colocation_filter.py except that this code extract all the records from the original data (Useful for testing the CCS2017 method)
+
 ### SOBA.py
 Feature extractions of our method as well as the evaluation of our method are implemented here. 
 
