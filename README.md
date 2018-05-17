@@ -19,9 +19,6 @@ Provided the definition required for the classes used throughout this project
 ### colocation.py
 Co-location generator, the first phase in our work, generating the co-location between check-ins of two users. The co-location implemented in this work apply two parameters: location distance and time difference. As for the location distance, we applied 0m (same venue id) to serve as same location, whereas this parameter can be modified by using the haversine distance between check-ins' venue. Time difference can varies from minutes, hours, days, or even weeks.
 
-### colocation_general.py
-Similar with "colocation.py" but accept general location distance (instead of the same venue id). But this version is still in beta and might have some bugs.
-
 ### colocation_filter.py 
 This code is intended to generate a new check-in and friend dataset based on the users who have at least 2 co-location with other users (Useful for testing the CCS2017 method)
 @inproceedings{BHPZ17,
