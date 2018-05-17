@@ -21,8 +21,8 @@ import time
 
 def generate_report(X, y, assign, notes, p, k, t, d):
     texts = []
-    names = ['original']
-    # names = ['original', 'over', 'under', 'combo']
+    # names = ['original']
+    names = ['original', 'over', 'under', 'combo']
 
     for i in range(len(names)):
         Xs = []

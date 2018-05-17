@@ -25,14 +25,14 @@ def testing(p, k, t, d, working_folder):
         # notes = ['SCI']
         # assign = [ [0,1,2,3] ]
         ## New Feature added (Popularity)
-        notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability', 'Popularity', 'F+D', 'F+TD', 'F+TS', 'F+P', 'D+TD', 'D+TS', 'D+P', 'TD+TS', 'TD+P', 'TS+P', 'F+D+TD', 'F+D+TS', 'F+D+P', 'F+TD+TS', 'F+TD+P', 'F+TS+P', 'D+TD+TS', 'D+TD+P', 'D+TS+P', 'TD+TS+P', 'F+D+TD+TS', 'F+D+TD+P', 'F+D+TS+P', 'F+TD+TS+P', 'D+TD+TS+P', 'SCI']
-        assign = [ [0,1,2,3,4], [0], [1], [2], [3], [4], [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4],  [0,1,2,3] ]
+        # notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability', 'Popularity', 'F+D', 'F+TD', 'F+TS', 'F+P', 'D+TD', 'D+TS', 'D+P', 'TD+TS', 'TD+P', 'TS+P', 'F+D+TD', 'F+D+TS', 'F+D+P', 'F+TD+TS', 'F+TD+P', 'F+TS+P', 'D+TD+TS', 'D+TD+P', 'D+TS+P', 'TD+TS+P', 'F+D+TD+TS', 'F+D+TD+P', 'F+D+TS+P', 'F+TD+TS+P', 'D+TD+TS+P', 'SCI']
+        # assign = [ [0,1,2,3,4], [0], [1], [2], [3], [4], [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4],  [0,1,2,3] ]
         ### Only All features
         # notes = ['SCI+']
         # assign = [ [0,1,2,3,4] ]
         ### SCI and SCI+
-        # notes = ['SCI+', 'SCI']
-        # assign = [ [0,1,2,3,4], [0,1,2,3] ]
+        notes = ['SCI+', 'SCI']
+        assign = [ [0,1,2,3,4], [0,1,2,3] ]
         texts = generate_report(X, y, assign, notes, p, k, t, d)
     return texts
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     ps.append(0)
     # ps.append(1)
     ### mode to be included
-    # ks.append(0)
+    ks.append(0)
     ks.append(-1)
     ### time threshold to be included
     ts.append(int(0.5 * HOUR))

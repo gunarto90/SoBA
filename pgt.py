@@ -9,6 +9,7 @@ from joblib import Parallel, delayed
 import re, os
 import sys
 import getopt
+import shutil
 
 co_raw_filename = 'co_raw_p{}_k{}_t{}_d{}.csv'
 pd_format = 'pgt_personal_density_p{}_k{}_s{}_f{}.csv'
@@ -139,6 +140,8 @@ def venue_global(users, venues, p, k, working_folder, write=True, i_start=0, i_f
     del all_user
     del texts[:]
     del texts
+    if i_start==0 and i_finish==-1:
+        shutil.copy2(vg_filename, vg_file.format(p, k)) # Copy the temp file to a merged version
     return venue_g
 
 def extraction(working_folder, p, k, t, d, friends, co_eval_file, p_density=None, g_entropy=None):
@@ -460,11 +463,11 @@ if __name__ == '__main__':
         ts = [1800, 3600, 5400, 7200]
         # ds = [0, 250, 500, 750]
         # modes = [1, 2, 11, 3]
-        # modes = [0]
-        modes = [1, 2, 11, 3, 4]
-        ps = [0]
+        modes = [0]
+        # modes = [1, 2, 11, 3, 4]
+        ps = [0, 1]
         # ks = [0]
-        ks = [-1]
+        ks = [0, -1]
         # ts = [3600]
         ds = [0]
         for mode in modes:
