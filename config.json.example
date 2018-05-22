@@ -1,3 +1,27 @@
 {
+  "n_core": 2,
+  "is_debug": true,
+
+  "__args_notes__": [
+
+  ],
+
+  "argv": {
+    "cmd":""
+  },
+
+  "__parameters_notes__": [
+    "ps is the active datasets for the experiments: p=0 is gowalla, p=1 is brightkite, p=2 is foursquare",
+    "ks is the active modes for the experiments: k=0 is weekend data, k=-1 is all data, and k=1 is weekdays data",
+    "ts is the time threshold for the co-location (in seconds)",
+    "ds is the distance threshold for the co-location (in meters)"
+  ],
+
+  "ps": [1],
+  "ks": [0],
+  "ts": [1800],
+  "ds": [0],
+
   "dataset": ["gowalla", "brightkite", "foursquare"],
+  "maps_api": "PUT YOUR GOOGLE MAPS API HERE TO GENERATE STATIC MAPS"
 }
