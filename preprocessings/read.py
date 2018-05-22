@@ -4,14 +4,6 @@ import numpy as np
 import pandas as pd
 ### Utility library
 import gc
-### Plotting library
-import matplotlib.pyplot as plt
-import seaborn as sns
-### Geopandas
-import geopandas as gpd
-import shapely
-from geopandas import GeoSeries, GeoDataFrame
-from shapely.geometry import Point
 ### Setup Directories for local library
 import sys
 import os
@@ -89,7 +81,7 @@ def read_processed(directory='gowalla', filename=checkin_all):
   ### Apply filtering
   ##  User count > 10 and location visit > 2 (otherwise there is no co-location)
   df = df[(df['u_count'] > 10) & (df['v_count'] > 1)]
-  df.drop(['u_count', 'v_count'], axis=1)
+  df.drop(['u_count', 'v_count'], axis=1, inplace=True)
   # print(df.describe(include='all'))
   # print(df.head(10))
 
@@ -102,30 +94,26 @@ def preprocess_data():
   # read_snap_stanford_checkin('gowalla', write)
 
 def visualize_data(df):
-  shapely.speedups.enable()
-  geometry = [Point(xy) for xy in zip(df.longitude, df.latitude)]
-  temp = df.drop(['longitude', 'latitude'], axis=1)
-  crs = {'init': 'epsg:4326'}
-  gdf = GeoDataFrame(temp, crs=crs, geometry=geometry)
-
-  print(gdf)
-  gdf.plot(marker='*', color='green', markersize=50, figsize=(5, 5));
-  plt.show()
-
-  del temp
-  del gdf
-  gc.collect()
+  test_limit = 100
+  temp = df[0:test_limit]  ### For testing purpose --> to speed-up and understand the data
+  gmplot(temp)
 
 def main():
   ### Read config
   config = read_config()
+
   ### Read original data and generate standardized data
   # preprocess_data()
 
   ### Read standardized data and perform preprocessing
   df = read_processed('foursquare')
-  df = df[0:10000]  ### For testing purpose --> to speed-up and understand the data
-  gmplot(df)
+  test_limit = 10         ### For testing purpose --> to speed-up and understand the data
+  df = df[0:test_limit]   ### For testing purpose --> to speed-up and understand the data
+
+  ### Convert the pandas dataframe to geopandas dataframe
+  # gdf = convert_to_geopandas(df)
+  # print(gdf.head())
+
   ### Visualize the dataframe
   # visualize_data(df)
 

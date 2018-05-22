@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+"""
+Plot the coordinates using Google Maps Static
+"""
 def gmplot(df, zoom=12, directory='visual/', filename='map.html'):
   ### Generate the dirs if it is not exist
   try:
