@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 
 """
 Plot the coordinates using Google Maps Static

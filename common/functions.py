@@ -4,7 +4,7 @@ import os
 import json
 import sys
 from datetime import datetime
-from math import radians, cos, sin, asin, sqrt, pow, exp
+from math import radians, cos, sin, asin, sqrt, pow, exp, log
 ### Geopandas etc (for GIS operation)
 import pandas as pd
 import geopandas as gpd
@@ -74,7 +74,7 @@ def entropy(data):
     total += item
   for item in data:
     pi = float(item)/total
-    ent -= pi * math.log(pi)
+    ent -= pi * log(pi)
   return ent
 
 """
