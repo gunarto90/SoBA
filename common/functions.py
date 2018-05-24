@@ -159,7 +159,7 @@ def make_sure_path_exists(path):
   try:
     os.makedirs(path)
     return True
-  except OSError as exception:
+  except OSError:
     return False
 
 def is_file_exists(filename):

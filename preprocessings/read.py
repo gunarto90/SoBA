@@ -118,7 +118,6 @@ Output:
 - Dictionary (uid, checkins) (int, dataframe)
 """
 @fn_timer
-# @profile
 def extract_checkins_per_user(dataset_name, mode, config):
   dataset_root = config['directory']['dataset']
   intermediate_root = config['directory']['intermediate']
@@ -143,7 +142,6 @@ def extract_checkins_per_user(dataset_name, mode, config):
   return checkins_per_user
 
 @fn_timer
-# @profile
 def main():
   ### Read config
   config = read_config()
