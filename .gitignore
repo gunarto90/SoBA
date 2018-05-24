@@ -6,3 +6,4 @@ log/*
 dataset/*
 *.json
 visual/*
+intermediate/*
