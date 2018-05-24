@@ -108,6 +108,15 @@ def visualize_data(df):
   temp = df[0:test_limit]  ### For testing purpose --> to speed-up and understand the data
   gmplot(temp)
 
+"""
+Extract all the checkins and group them on each user
+Input:
+- dataset_name (foursquare, gowalla, brightkite)
+- mode (all, weekday, weekend)
+- config: config.json filename
+Output:
+- Dictionary (uid, checkins) (int, dataframe)
+"""
 @fn_timer
 # @profile
 def extract_checkins_per_user(dataset_name, mode, config):
