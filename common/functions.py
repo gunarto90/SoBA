@@ -4,14 +4,19 @@ import os
 import json
 import sys
 from datetime import datetime
+import time
+from functools import wraps
 from math import radians, cos, sin, asin, sqrt, pow, exp, log
 ### Geopandas etc (for GIS operation)
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 from geopandas import GeoSeries, GeoDataFrame
 import shapely
 from shapely.geometry import Point
 import pyproj
+
+IS_DEBUG = True
 
 """
 Configurations
@@ -21,9 +26,15 @@ def read_config(filename='config.json'):
     with open(filename) as data_file:
       config = json.load(data_file)
       return config
+  except IOError as ex:
+    print('File not found : %s' % filename)
+    print('Please create a file named \"config.json\" in the root directory. The contents of the file should refer to the file \"config.json.example\"')
   except Exception as ex:
     print('Exception in init config file : %s' % ex)
   return None
+
+def init_all_folders(config):
+  pass
 
 """
 Logging tools
@@ -33,14 +44,18 @@ def error(message, source, out_dir='log', out_file='error.txt'):
     if not os.path.exists(out_dir):
       os.makedirs(out_dir)
   except Exception as ex:
-    print(ex)
+    if IS_DEBUG:
+      print(ex)
   try:
     with open('/'.join([out_dir, out_file]), 'a') as fw:
       fw.write('[{}] ({}) {}\n'.format(datetime.now(), source, message))
   except Exception as ex:
-    print(ex)
+    if IS_DEBUG:
+      print(ex)
 
 def debug(*argv):
+  if not IS_DEBUG:
+    return
   if len(argv) == 0 or argv is None:
     return
   try:
@@ -51,7 +66,18 @@ def debug(*argv):
     sys.stdout.flush()
   except Exception as ex:
     error(str(ex), source='lalala.functions.py/debug')
-
+ 
+def fn_timer(function):
+    @wraps(function)
+    def function_timer(*args, **kwargs):
+        t0 = time.time()
+        result = function(*args, **kwargs)
+        t1 = time.time()
+        debug("Total time running \"%s\": %s seconds" %
+               (function.func_name, str(t1-t0))
+               )
+        return result
+    return function_timer
 
 ### Geopandas
 def convert_to_geopandas(df):
@@ -103,3 +129,49 @@ def haversine(lat1, lon1, lat2, lon2):
   km = 6367 * c
   distance = km * 1000
   return distance # in meter
+
+"""
+Input: array of float
+Output: array of float
+"""
+def haversine_np(lon1, lat1, lon2, lat2):
+  """
+  Calculate the great circle distance between two points
+  on the earth (specified in decimal degrees)
+  All args must be of equal length (array-like)
+  """
+  lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
+
+  dlon = lon2 - lon1
+  dlat = lat2 - lat1
+
+  a = np.sin(dlat/2.0)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2.0)**2
+
+  c = 2 * np.arcsin(np.sqrt(a))
+  km = 6367 * c
+  distance = km * 1000
+  return distance # in meter
+
+"""
+IO tools
+"""
+def make_sure_path_exists(path):
+  try:
+    os.makedirs(path)
+    return True
+  except OSError as exception:
+    return False
+
+def is_file_exists(filename):
+  return os.path.isfile(filename)
+  # try:
+  #   with open(filename, 'r'):
+  #     return True
+  # except:
+  #   return False
+
+def remove_file_if_exists(filename):
+  try:
+    os.remove(filename)
+  except OSError:
+    pass
