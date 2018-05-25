@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-import csv
-import io
-from common.functions import IS_DEBUG, read_config, debug, make_sure_path_exists
+from joblib import Parallel, delayed
+### Custom libraries
+from common.functions import IS_DEBUG, read_config, debug, fn_timer
 from preprocessings.read import extract_checkins_per_user
-from methods.colocation import generate_colocation, extract_geometry
+# from methods.colocation import generate_colocation, extract_geometry, write_colocation
+from methods.colocation import process_map, process_reduce
 
 def init_begin_end(n_core, arr_size):
   begin = []
@@ -12,7 +13,7 @@ def init_begin_end(n_core, arr_size):
     if i == 0:
       begin.append(0)
     else:
-      begin.append(1+int(arr_size/n_core)*(i))
+      begin.append(int(arr_size/n_core)*(i))
     if i == n_core - 1:
       end.append(arr_size)
     else:
@@ -20,17 +21,16 @@ def init_begin_end(n_core, arr_size):
 
   return begin, end
 
-def write_colocation(data, config, p, k, t, d):
-  directory = config['directory']['colocation']
-  filename  = config['intermediate']['colocation']
-  make_sure_path_exists(directory)
-  output = io.BytesIO()
-  writer = csv.writer(output)
-  for row in data:
-    writer.writerow(row)
-  with open('/'.join([directory, filename.format(p,k,t,d)]), 'wb') as f:
-    f.write('user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff\n')
-    f.write(output.getvalue())
+@fn_timer
+def map_reduce_colocation(config, checkins_per_user, p, k, t_diff, s_diff):
+  n_core = config['n_core']
+  ### For the sake of parallelization
+  begins, ends = init_begin_end(n_core, len(checkins_per_user))
+  debug('Begins', begins, 'Ends', ends)
+  ### Generate colocation based on extracted checkins
+  Parallel(n_jobs=n_core)(delayed(process_map)(checkins_per_user, config, p, k, t_diff, s_diff, begins[i], ends[i]) for i in range(len(begins)))
+  process_reduce(config, p, k, t_diff, s_diff)
+  debug('Finished map-reduce for [p%d, k%d, t%d, d%d]' % (p, k, t_diff, s_diff))
 
 def run_colocation(config):
   ### Read standardized data and perform preprocessing
@@ -48,15 +48,9 @@ def run_colocation(config):
       debug('Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
       ### Extracting checkins for each user
       checkins_per_user = extract_checkins_per_user(dataset_name, mode, config)
-      ### For the sake of parallelization
-      # begin, end = init_begin_end(n_core, len(checkins_per_user))
-      # debug(begin)
-      # debug(end)
       for t_diff in t_diffs:
         for s_diff in s_diffs:
-          ### Generate colocation based on extracted checkins
-          colocations = generate_colocation(checkins_per_user, start=0, finish=10, t_diff=t_diff, s_diff=s_diff)  ### Start should be 0 and finish should be len(checkins_per_user)
-          write_colocation(colocations, config, p, k, t_diff, s_diff)
+          map_reduce_colocation(config, checkins_per_user, p, k, t_diff, s_diff)
 
 def main():
   ### Read config
