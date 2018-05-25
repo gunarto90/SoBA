@@ -1,8 +1,7 @@
 {
-  "n_core": 2,
-  "is_debug": true,
+  "n_core": 4,
 
-  "__args_notes__": [
+  "__argv_notes__": [
 
   ],
 
@@ -10,18 +9,33 @@
     "cmd":""
   },
 
+  "active_dataset": ["foursquare"],
+  "active_mode": ["weekend"],
+
   "__parameters_notes__": [
-    "ps is the active datasets for the experiments: p=0 is gowalla, p=1 is brightkite, p=2 is foursquare",
-    "ks is the active modes for the experiments: k=0 is weekend data, k=-1 is all data, and k=1 is weekdays data",
     "ts is the time threshold for the co-location (in seconds)",
-    "ds is the distance threshold for the co-location (in meters)"
+    "ds is the distance threshold for the co-location (in degrees of latitude and longitude)",
+    "distance threshold <0.001> is approximately 111 meters (in the equator) or less depends on the distance to the Equator"
   ],
 
-  "ps": [1],
-  "ks": [0],
   "ts": [1800],
   "ds": [0],
 
   "dataset": ["gowalla", "brightkite", "foursquare"],
-  "maps_api": "PUT YOUR GOOGLE MAPS API HERE TO GENERATE STATIC MAPS"
+  "mode": ["all", "weekday", "weekend"],
+  "maps_api": "GOOGLE MAPS API",
+
+  "directory": {
+    "dataset": "dataset",
+    "intermediate": "intermediate",
+    "log": "log",
+    "visual":"visual",
+    "colocation":"intermediate/colocation"
+  },
+  "intermediate": {
+    "checkins":"checkins_per_user_{}.pickle",
+    "colocation":"co_raw_p{}_k{}_t{}_d{}.csv",
+    "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
+    "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv"
+  }
 }
