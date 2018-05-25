@@ -66,6 +66,12 @@ def debug(*argv):
     sys.stdout.flush()
   except Exception as ex:
     error(str(ex), source='lalala.functions.py/debug')
+
+def report_progress(counter, start, finish, context='', every_n=100):
+  if counter % every_n == 0:
+    debug('Processing {} of {} {} ({:.3f}%) '.format(
+      counter, (finish-start), context, float(counter)*100.0/(finish-start))
+    )
  
 def fn_timer(function):
     @wraps(function)
