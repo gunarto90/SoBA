@@ -67,24 +67,24 @@ def generate_colocation(checkins_per_user, start=0, finish=0, t_diff=1800, s_dif
   for i in range(start, finish):
     u_i = uids[i]
     df_i = checkins_per_user[u_i].sort_values(by=['timestamp'])
-    ti_min = checkins_per_user[u_i]['timestamp'].min()
-    ti_max = checkins_per_user[u_i]['timestamp'].max()
-    xi_min = checkins_per_user[u_i]['longitude'].min()
-    xi_max = checkins_per_user[u_i]['longitude'].max()
-    yi_min = checkins_per_user[u_i]['latitude'].min()
-    yi_max = checkins_per_user[u_i]['latitude'].max()
+    ti_min = checkins_per_user[u_i]['timestamp'].min()-t_diff
+    ti_max = checkins_per_user[u_i]['timestamp'].max()+t_diff
+    xi_min = checkins_per_user[u_i]['longitude'].min()-s_diff
+    xi_max = checkins_per_user[u_i]['longitude'].max()+s_diff
+    yi_min = checkins_per_user[u_i]['latitude'].min()-s_diff
+    yi_max = checkins_per_user[u_i]['latitude'].max()+s_diff
     # debug('#Checkins of User', u_i, ':', len(df_i))
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(uids)):
       u_j = uids[j]
       df_j = checkins_per_user[u_j].sort_values(by=['timestamp'])
-      tj_min = checkins_per_user[u_j]['timestamp'].min()
-      tj_max = checkins_per_user[u_j]['timestamp'].max()
-      xj_min = checkins_per_user[u_j]['longitude'].min()
-      xj_max = checkins_per_user[u_j]['longitude'].max()
-      yj_min = checkins_per_user[u_j]['latitude'].min()
-      yj_max = checkins_per_user[u_j]['latitude'].max()
+      tj_min = checkins_per_user[u_j]['timestamp'].min()-t_diff
+      tj_max = checkins_per_user[u_j]['timestamp'].max()+t_diff
+      xj_min = checkins_per_user[u_j]['longitude'].min()-s_diff
+      xj_max = checkins_per_user[u_j]['longitude'].max()+s_diff
+      yj_min = checkins_per_user[u_j]['latitude'].min()-s_diff
+      yj_max = checkins_per_user[u_j]['latitude'].max()+s_diff
       ### If there are no intersections between two users' timestamp, then skip
       if ti_max < tj_min or tj_max < ti_min:
         skip += 1
