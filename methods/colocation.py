@@ -63,15 +63,36 @@ def generate_colocation(checkins_per_user, start=0, finish=0, t_diff=1800, s_dif
   colocations = []
   uids = checkins_per_user.keys()
   counter = 0
+  skip = 0
   for i in range(start, finish):
     u_i = uids[i]
     df_i = checkins_per_user[u_i].sort_values(by=['timestamp'])
+    ti_min = checkins_per_user[u_i]['timestamp'].min()
+    ti_max = checkins_per_user[u_i]['timestamp'].max()
+    xi_min = checkins_per_user[u_i]['longitude'].min()
+    xi_max = checkins_per_user[u_i]['longitude'].max()
+    yi_min = checkins_per_user[u_i]['latitude'].min()
+    yi_max = checkins_per_user[u_i]['latitude'].max()
     # debug('#Checkins of User', u_i, ':', len(df_i))
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(uids)):
       u_j = uids[j]
       df_j = checkins_per_user[u_j].sort_values(by=['timestamp'])
+      tj_min = checkins_per_user[u_j]['timestamp'].min()
+      tj_max = checkins_per_user[u_j]['timestamp'].max()
+      xj_min = checkins_per_user[u_j]['longitude'].min()
+      xj_max = checkins_per_user[u_j]['longitude'].max()
+      yj_min = checkins_per_user[u_j]['latitude'].min()
+      yj_max = checkins_per_user[u_j]['latitude'].max()
+      ### If there are no intersections between two users' timestamp, then skip
+      if ti_max < tj_min or tj_max < ti_min:
+        skip += 1
+        continue
+      ### If the GPS coordinates have no intersections
+      if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
+        skip += 1
+        continue
       sj_tree = create_spatial_kd_tree(df_j)
       tj_tree = create_temporal_kd_tree(df_j)
       ### temporal co-occurrence
@@ -87,11 +108,12 @@ def generate_colocation(checkins_per_user, start=0, finish=0, t_diff=1800, s_dif
           ### Finding the intersection and adding colocations to the list
           colocations.extend(extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx))
       ### For debugging purpose
-      if IS_DEBUG is True and j > 10:
-        break
+      # if IS_DEBUG is True and j > 10:
+      #   break
     counter += 1
     ### For every N users, shows the progress
-    report_progress(counter, start, finish, context='users', every_n=500)
+    report_progress(counter, start, finish, context='users', every_n=100)
+  debug('Skip', skip, 'colocations due to the missing time / spatial intersections')
   return colocations
 
 """
