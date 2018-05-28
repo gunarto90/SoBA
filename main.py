@@ -1,23 +1,24 @@
 #!/usr/bin/env python
 from joblib import Parallel, delayed
+import math
 ### Custom libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer
 from preprocessings.read import extract_checkins_per_user
-# from methods.colocation import generate_colocation, extract_geometry, write_colocation
 from methods.colocation import process_map, process_reduce
 
 def init_begin_end(n_core, arr_size):
   begin = []
   end = []
+  x = n_core ### Exponents: To make sure that the distributions are evenly done
   for i in range(n_core):
     if i == 0:
       begin.append(0)
     else:
-      begin.append(int(arr_size/n_core)*(i))
+      begin.append(int(arr_size/math.pow(n_core,x)*(math.pow(i, x))))
     if i == n_core - 1:
       end.append(arr_size)
     else:
-      end.append(int(arr_size/n_core)*(i+1))
+      end.append(int(arr_size/math.pow(n_core,x)*(math.pow(i+1,x))))
 
   return begin, end
 
