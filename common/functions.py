@@ -3,7 +3,7 @@
 import os
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, date
 import time
 from functools import wraps
 from math import radians, cos, sin, asin, sqrt, pow, exp, log
@@ -17,6 +17,7 @@ from shapely.geometry import Point
 import pyproj
 
 IS_DEBUG = True
+LOG_PATH = 'log'
 
 """
 Configurations
@@ -39,7 +40,7 @@ def init_all_folders(config):
 """
 Logging tools
 """
-def error(message, source, out_dir='log', out_file='error.txt'):
+def error(message, source, out_dir=LOG_PATH, out_file='error.txt'):
   try:
     if not os.path.exists(out_dir):
       os.makedirs(out_dir)
@@ -63,6 +64,14 @@ def debug(*argv):
     s = ' '.join(map(lambda s: unicode(str(s), 'utf-8'), argv))
     # s = unicode(str(s), 'utf-8')
     print('[{}] {}'.format(datetime.now(), s))
+    try:
+      log_name = '.'.join([str(date.today()), 'txt'])
+      log_path = '/'.join([LOG_PATH, log_name])
+      with open(log_path, 'a') as fw:
+        fw.write('[{}] {}\n'.format(str(datetime.now()), s))
+    except Exception as ex:
+      if IS_DEBUG:
+        print(ex)
     sys.stdout.flush()
   except Exception as ex:
     error(str(ex), source='lalala.functions.py/debug')
