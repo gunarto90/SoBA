@@ -1,14 +1,6 @@
 {
   "n_core": 4,
 
-  "__argv_notes__": [
-
-  ],
-
-  "argv": {
-    "cmd":""
-  },
-
   "active_dataset": ["foursquare"],
   "active_mode": ["weekend"],
 
@@ -18,8 +10,8 @@
     "distance threshold <0.001> is approximately 111 meters (in the equator) or less depends on the distance to the Equator"
   ],
 
-  "ts": [1800],
-  "ds": [0],
+  "ts": [7200],
+  "ds": [0.01],
 
   "dataset": ["gowalla", "brightkite", "foursquare"],
   "mode": ["all", "weekday", "weekend"],
@@ -28,7 +20,6 @@
   "directory": {
     "dataset": "dataset",
     "intermediate": "intermediate",
-    "log": "log",
     "visual":"visual",
     "colocation":"intermediate/colocation"
   },
