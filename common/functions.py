@@ -78,8 +78,8 @@ def debug(*argv):
 
 def report_progress(counter, start, finish, context='', every_n=100):
   if counter % every_n == 0:
-    debug('Processing {} of {} {} ({:.3f}% [{} of {}]) '.format(
-      counter, (finish-start), context, float(counter)*100.0/(finish-start), counter, finish),
+    debug('Processing {} of {} {} ({:.3f}%) '.format(
+      counter, (finish-start), context, float(counter)*100.0/(finish-start)),
     )
  
 def fn_timer(function):
