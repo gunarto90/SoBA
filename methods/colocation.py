@@ -111,17 +111,14 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
         ### Only if both temporal and spatial co-occurrence > 0
         if s_count > 0:
           ### Finding the intersection and adding colocations to the list
-          temp_colocation = extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx)
-          if write_per_user is True:
-            write_colocation(temp_colocation, config, p, k, t_diff, s_diff, start, finish)
-            del temp_colocation[:]
-            del temp_colocation
-          else:
-            colocations.extend(temp_colocation)
+          colocations.extend(extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx))
       ### For debugging purpose
       # if IS_DEBUG is True and j > 10:
       #   break
     counter += 1
+    if write_per_user is True:
+      write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+      del colocations[:]
     ### For every N users, shows the progress
     report_progress(counter, start, finish, context='users', every_n=int((finish-start)/50))
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
