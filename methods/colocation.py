@@ -14,6 +14,7 @@ import re
 import time
 ### KD Tree
 from scipy import spatial
+sys.setrecursionlimit(10000)  ### To make sure recursion limit do not stop the KD-tree
 ### Setup Directories for local library
 PWD = os.getcwd()
 sys.path.append(PWD)
@@ -53,38 +54,42 @@ def normalize_radius_index(idx):
 """
 Co-location generation
 Input:
-- checkins_per_user (dictionary of [int, dataframe])
-- start : the beginning index of co-location generation process (useful for parallelization)
-- finish : the ending index of co-location generation process (useful for parallelization)
-- t_diff : time threshold for co-location criterion (in seconds)
-- s_diff : spatial threshold for co-location criterion (in lat/lon degree)
+- checkins: dictionary of [int, dataframe]
+- config  : configuration file
+- p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
+- k       : mode for dataset (0: all, 1: weekday, 2: weekend)
+- t_diff  : time threshold for co-location criterion (in seconds)
+- s_diff  : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
+- start   : the beginning index of co-location generation process (useful for parallelization)
+- finish  : the ending index of co-location generation process (useful for parallelization)
+- write_per_user : if it is True then the colocation is written to file per user (not all) -- Useful for saving memory when processing data
 """
-def generate_colocation(checkins_per_user, start=0, finish=0, t_diff=1800, s_diff=0):
+def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user):
   colocations = []
-  uids = checkins_per_user.keys()
+  uids = checkins.keys()
   counter = 0
   skip = 0
   for i in range(start, finish):
     u_i = uids[i]
-    df_i = checkins_per_user[u_i].sort_values(by=['timestamp'])
-    ti_min = checkins_per_user[u_i]['timestamp'].min()-t_diff
-    ti_max = checkins_per_user[u_i]['timestamp'].max()+t_diff
-    xi_min = checkins_per_user[u_i]['longitude'].min()-s_diff
-    xi_max = checkins_per_user[u_i]['longitude'].max()+s_diff
-    yi_min = checkins_per_user[u_i]['latitude'].min()-s_diff
-    yi_max = checkins_per_user[u_i]['latitude'].max()+s_diff
+    df_i = checkins[u_i].sort_values(by=['timestamp'])
+    ti_min = checkins[u_i]['timestamp'].min()-t_diff
+    ti_max = checkins[u_i]['timestamp'].max()+t_diff
+    xi_min = checkins[u_i]['longitude'].min()-s_diff
+    xi_max = checkins[u_i]['longitude'].max()+s_diff
+    yi_min = checkins[u_i]['latitude'].min()-s_diff
+    yi_max = checkins[u_i]['latitude'].max()+s_diff
     # debug('#Checkins of User', u_i, ':', len(df_i))
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(uids)):
       u_j = uids[j]
-      df_j = checkins_per_user[u_j].sort_values(by=['timestamp'])
-      tj_min = checkins_per_user[u_j]['timestamp'].min()-t_diff
-      tj_max = checkins_per_user[u_j]['timestamp'].max()+t_diff
-      xj_min = checkins_per_user[u_j]['longitude'].min()-s_diff
-      xj_max = checkins_per_user[u_j]['longitude'].max()+s_diff
-      yj_min = checkins_per_user[u_j]['latitude'].min()-s_diff
-      yj_max = checkins_per_user[u_j]['latitude'].max()+s_diff
+      df_j = checkins[u_j].sort_values(by=['timestamp'])
+      tj_min = checkins[u_j]['timestamp'].min()-t_diff
+      tj_max = checkins[u_j]['timestamp'].max()+t_diff
+      xj_min = checkins[u_j]['longitude'].min()-s_diff
+      xj_max = checkins[u_j]['longitude'].max()+s_diff
+      yj_min = checkins[u_j]['latitude'].min()-s_diff
+      yj_max = checkins[u_j]['latitude'].max()+s_diff
       ### If there are no intersections between two users' timestamp, then skip
       if ti_max < tj_min or tj_max < ti_min:
         skip += 1
@@ -106,14 +111,20 @@ def generate_colocation(checkins_per_user, start=0, finish=0, t_diff=1800, s_dif
         ### Only if both temporal and spatial co-occurrence > 0
         if s_count > 0:
           ### Finding the intersection and adding colocations to the list
-          colocations.extend(extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx))
+          temp_colocation = extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx)
+          if write_per_user is True:
+            write_colocation(temp_colocation, config, p, k, t_diff, s_diff, start, finish)
+            del temp_colocation[:]
+            del temp_colocation
+          else:
+            colocations.extend(temp_colocation)
       ### For debugging purpose
       # if IS_DEBUG is True and j > 10:
       #   break
     counter += 1
     ### For every N users, shows the progress
-    report_progress(counter, start, finish, context='users', every_n=100)
-  debug('Skip', skip, 'colocations due to the missing time / spatial intersections')
+    report_progress(counter, start, finish, context='users', every_n=int((finish-start)/20))
+  debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
   return colocations
 
 """
@@ -152,7 +163,7 @@ def write_colocation(data, config, p, k, t, d, start, finish):
   writer = csv.writer(output)
   for row in data:
     writer.writerow(row)
-  with open('/'.join([directory, filename.format(p,k,t,d,start,finish)]), 'wb') as f:
+  with open('/'.join([directory, filename.format(p,k,t,d,start,finish)]), 'ab') as f:
     f.write(colocation_header)
     f.write(output.getvalue())
   debug('Finished writing to %s' % '/'.join([directory, filename.format(p,k,t,d,start,finish)]))
@@ -161,10 +172,20 @@ def write_colocation(data, config, p, k, t, d, start, finish):
 Map and Reduce
 """
 
-def process_map(checkins_per_user, config, p, k, t_diff=1800, s_diff=0, start=0, finish=0):
+def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
+  ### Clear all intermediate files before doing the map-reduce
+  re_format = config['intermediate']['colocation_re']
+  working_directory = config['directory']['colocation']
+  pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
+  for fname in os.listdir(working_directory):
+    if fname.endswith(".csv"):
+      if pattern.match(fname):
+        remove_file_if_exists('/'.join([working_directory, fname]))
+  ### Execute the mapping process
   t0 = time.time()
-  colocations = generate_colocation(checkins_per_user, start, finish, t_diff, s_diff)
-  write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+  colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)
+  if not write_per_user is True:
+    write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
   elapsed = time.time() - t0
   debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
