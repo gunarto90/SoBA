@@ -123,7 +123,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
       #   break
     counter += 1
     ### For every N users, shows the progress
-    report_progress(counter, start, finish, context='users', every_n=int((finish-start)/20))
+    report_progress(counter, start, finish, context='users', every_n=int((finish-start)/50))
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
   return colocations
 
@@ -158,29 +158,34 @@ def extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx):
 def write_colocation(data, config, p, k, t, d, start, finish):
   directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
-  make_sure_path_exists(directory)
   output = io.BytesIO()
   writer = csv.writer(output)
   for row in data:
     writer.writerow(row)
   with open('/'.join([directory, filename.format(p,k,t,d,start,finish)]), 'ab') as f:
-    f.write(colocation_header)
     f.write(output.getvalue())
-  debug('Finished writing to %s' % '/'.join([directory, filename.format(p,k,t,d,start,finish)]))
 
 """
 Map and Reduce
 """
 
-def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
+def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   ### Clear all intermediate files before doing the map-reduce
   re_format = config['intermediate']['colocation_re']
   working_directory = config['directory']['colocation']
+  filename  = config['intermediate']['colocation_part']
   pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
+  make_sure_path_exists(working_directory)
   for fname in os.listdir(working_directory):
     if fname.endswith(".csv"):
       if pattern.match(fname):
         remove_file_if_exists('/'.join([working_directory, fname]))
+  for i in range(len(begins)):
+    with open('/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
+      f.write(colocation_header)
+      debug('Co-location part %s has been created' % '/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]))
+
+def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
   t0 = time.time()
   colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)

@@ -4,7 +4,7 @@ import math
 ### Custom libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer
 from preprocessings.read import extract_checkins_per_user
-from methods.colocation import process_map, process_reduce
+from methods.colocation import process_map, process_reduce, prepare_colocation
 
 def init_begin_end(n_core, arr_size):
   begin = []
@@ -29,6 +29,7 @@ def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
   begins, ends = init_begin_end(n_core, len(checkins))
   debug('Begins', begins, 'Ends', ends)
   ### Generate colocation based on extracted checkins
+  prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
   Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
   process_reduce(config, p, k, t_diff, s_diff)
   debug('Finished map-reduce for [p%d, k%d, t%d, d%d]' % (p, k, t_diff, s_diff))
