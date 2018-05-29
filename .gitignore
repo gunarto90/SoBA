@@ -7,3 +7,4 @@ dataset/*
 *.json
 visual/*
 intermediate/*
+.DS_Store
