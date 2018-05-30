@@ -134,7 +134,7 @@ def extract_checkins(dataset_name, mode, config, id='user'):
     else:
       uids = df[id].unique()
       for uid in uids:
-        checkins[uid] = df.loc[df['user'] == uid]  ### Need to order by "timestamp"
+        checkins[uid] = df.loc[df[id] == uid]  ### Need to order by "timestamp"
       with open(pickle_filename, 'wb') as handle:
         pickle.dump(checkins, handle, protocol=pickle.HIGHEST_PROTOCOL)
   else:
