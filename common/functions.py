@@ -7,14 +7,8 @@ from datetime import datetime, date
 import time
 from functools import wraps
 from math import radians, cos, sin, asin, sqrt, pow, exp, log
-### Geopandas etc (for GIS operation)
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-from geopandas import GeoSeries, GeoDataFrame
-import shapely
-from shapely.geometry import Point
-import pyproj
 
 IS_DEBUG = True
 LOG_PATH = 'log'
@@ -93,15 +87,6 @@ def fn_timer(function):
                )
         return result
     return function_timer
-
-### Geopandas
-def convert_to_geopandas(df):
-  geometry = [Point(xy) for xy in zip(df.latitude, df.longitude)]
-  df.drop(['longitude', 'latitude'], axis=1, inplace=True)
-  crs = {'init': 'epsg:4326'}  # assuming we're using WGS84 geographic
-  gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
-
-  return gdf
 
 ### Metrics
 """
