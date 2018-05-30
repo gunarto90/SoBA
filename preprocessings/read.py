@@ -108,6 +108,41 @@ def visualize_data(df):
   temp = df[0:test_limit]  ### For testing purpose --> to speed-up and understand the data
   gmplot(temp)
 
+@fn_timer
+def extract_checkins(dataset_name, mode, config, id='user'):
+  dataset_root = config['directory']['dataset']
+  intermediate_root = config['directory']['intermediate']
+  if id == 'user':
+    selected_intermediate = 'checkins_per_user'
+  elif id == 'location':
+    selected_intermediate = 'checkins_per_venue'
+  elif id == 'checkin':
+    selected_intermediate = 'checkins_all'
+  checkins_intermediate_file = config['intermediate'][selected_intermediate]
+  debug('Processing %s [%s] for each %s' % (dataset_name, mode, id))
+  pickle_directory = '/'.join([intermediate_root, dataset_name])
+  make_sure_path_exists(pickle_directory)
+  pickle_filename = '/'.join([pickle_directory, checkins_intermediate_file.format(mode)])
+  if not is_file_exists(pickle_filename):
+    df = read_processed(dataset_root, dataset_name, mode)
+    debug('#checkins', len(df))
+    checkins = {}
+    if id == 'checkin':
+      checkins[0] = df
+      with open(pickle_filename, 'wb') as handle:
+        pickle.dump(df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+      uids = df[id].unique()
+      for uid in uids:
+        checkins[uid] = df.loc[df['user'] == uid]  ### Need to order by "timestamp"
+      with open(pickle_filename, 'wb') as handle:
+        pickle.dump(checkins, handle, protocol=pickle.HIGHEST_PROTOCOL)
+  else:
+    with open(pickle_filename, 'rb') as handle:
+      checkins = pickle.load(handle)
+  debug('#%s' % id, len(checkins))
+  return checkins
+
 """
 Extract all the checkins and group them on each user
 Input:
@@ -115,31 +150,37 @@ Input:
 - mode (all, weekday, weekend)
 - config: config.json filename
 Output:
-- Dictionary (uid, checkins) (int, dataframe)
+- Dictionary (user id, checkins) (int, dataframe)
 """
 @fn_timer
 def extract_checkins_per_user(dataset_name, mode, config):
-  dataset_root = config['directory']['dataset']
-  intermediate_root = config['directory']['intermediate']
-  checkins_intermediate_file = config['intermediate']['checkins']
-  debug('Processing %s [%s]' % (dataset_name, mode))
-  pickle_directory = '/'.join([intermediate_root, dataset_name])
-  make_sure_path_exists(pickle_directory)
-  pickle_filename = '/'.join([pickle_directory, checkins_intermediate_file.format(mode)])
-  if not is_file_exists(pickle_filename):
-    df = read_processed(dataset_root, dataset_name, mode)
-    debug('#checkins', len(df))
-    uids = df['user'].unique()
-    checkins_per_user = {}
-    for uid in uids:
-      checkins_per_user[uid] = df.loc[df['user'] == uid]  ### Need to order by "timestamp"
-    with open(pickle_filename, 'wb') as handle:
-      pickle.dump(checkins_per_user, handle, protocol=pickle.HIGHEST_PROTOCOL)
-  else:
-    with open(pickle_filename, 'rb') as handle:
-      checkins_per_user = pickle.load(handle)
-  debug('#users', len(checkins_per_user))
-  return checkins_per_user
+  return extract_checkins(dataset_name, mode, config, 'user')
+
+"""
+Extract all the checkins and group them on each user
+Input:
+- dataset_name (foursquare, gowalla, brightkite)
+- mode (all, weekday, weekend)
+- config: config.json filename
+Output:
+- Dictionary (venue id, checkins) (int, dataframe)
+"""
+@fn_timer
+def extract_checkins_per_venue(dataset_name, mode, config):
+  return extract_checkins(dataset_name, mode, config, 'location')
+
+"""
+Extract all the checkins and group them on each user
+Input:
+- dataset_name (foursquare, gowalla, brightkite)
+- mode (all, weekday, weekend)
+- config: config.json filename
+Output:
+- Dictionary (checkin id, checkins) (int, dataframe)
+"""
+@fn_timer
+def extract_checkins_all(dataset_name, mode, config):
+  return extract_checkins(dataset_name, mode, config, 'checkin')
 
 @fn_timer
 def main():
@@ -153,24 +194,13 @@ def main():
   ### Read standardized data and perform preprocessing
   datasets = config['active_dataset']
   modes = config['active_mode']
+  # ids = ['user', 'location', 'checkin']
+  ids = ['location']
   for dataset_name in datasets:
     for mode in modes:
-      checkins_per_user = extract_checkins_per_user(dataset_name, mode, config)
-      debug(len(checkins_per_user))
-
-  # geometry = pd.DataFrame(df, columns=['latitude', 'longitude', 'timestamp']).values
-  # debug(geometry.shape, geometry)
-  # geometry = np.reshape(geometry, (-1, 2))
-  # tree = KDTree(geometry)
-  # debug(geometry[0])
-  # dist, ind = tree.query(np.array(geometry[0]).reshape(-1,2), k=3)
-  # debug(ind, dist)
-
-  ### Convert the pandas dataframe to geopandas dataframe
-  # gdf = convert_to_geopandas(df)
-
-  ### Visualize the dataframe
-  # visualize_data(df)
+      for id in ids:
+        checkins = extract_checkins(dataset_name, mode, config, id)
+        debug(len(checkins))
 
 if __name__ == '__main__':
   main()
