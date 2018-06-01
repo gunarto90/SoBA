@@ -9,7 +9,7 @@ from methods.colocation import process_map, process_reduce, prepare_colocation
 def init_begin_end(n_core, ending, initial=0):
   begin = []
   end = []
-  x = 2.5 ### Exponents: To make sure that the distributions are evenly done
+  x = 2.2 ### Exponents: To make sure that the distributions are evenly done
   for i in range(n_core):
     if i == 0:
       begin.append(initial)
