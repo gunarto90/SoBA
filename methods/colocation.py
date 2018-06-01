@@ -12,6 +12,7 @@ import csv
 import io
 import re
 import time
+import gc
 ### KD Tree
 from scipy import spatial
 sys.setrecursionlimit(10000)  ### To make sure recursion limit do not stop the KD-tree
@@ -119,6 +120,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     if write_per_user is True:
       write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
       del colocations[:]
+      gc.collect()
     ### For every N users, shows the progress
     report_progress(counter, start, finish, context='users', every_n=int((finish-start)/50))
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')

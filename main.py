@@ -6,19 +6,19 @@ from common.functions import IS_DEBUG, read_config, debug, fn_timer
 from preprocessings.read import extract_checkins_per_user
 from methods.colocation import process_map, process_reduce, prepare_colocation
 
-def init_begin_end(n_core, arr_size):
+def init_begin_end(n_core, ending, initial=0):
   begin = []
   end = []
   x = 2.5 ### Exponents: To make sure that the distributions are evenly done
   for i in range(n_core):
     if i == 0:
-      begin.append(0)
+      begin.append(initial)
     else:
-      begin.append(int(arr_size/math.pow(n_core,x)*(math.pow(i, x))))
+      begin.append(initial+int(ending/math.pow(n_core,x)*(math.pow(i, x))))
     if i == n_core - 1:
-      end.append(arr_size)
+      end.append(ending)
     else:
-      end.append(int(arr_size/math.pow(n_core,x)*(math.pow(i+1,x))))
+      end.append(initial+int(ending/math.pow(n_core,x)*(math.pow(i+1,x))))
 
   return begin, end
 
@@ -26,13 +26,16 @@ def init_begin_end(n_core, arr_size):
 def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
   n_core = config['n_core']
   ### For the sake of parallelization
-  begins, ends = init_begin_end(n_core, len(checkins))
+  begins, ends = init_begin_end(n_core, ending=len(checkins), initial=0)
   debug('Begins', begins, 'Ends', ends)
   ### Generate colocation based on extracted checkins
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
-  Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
-  process_reduce(config, p, k, t_diff, s_diff)
-  debug('Finished map-reduce for [p%d, k%d, t%d, d%d]' % (p, k, t_diff, s_diff))
+  if n_core > 1:
+    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
+  else:
+    process_map(checkins, config, 0, len(checkins), p, k, t_diff, s_diff)
+  # process_reduce(config, p, k, t_diff, s_diff)
+  # debug('Finished map-reduce for [p%d, k%d, t%d, d%d]' % (p, k, t_diff, s_diff))
 
 def run_colocation(config):
   ### Read standardized data and perform preprocessing
