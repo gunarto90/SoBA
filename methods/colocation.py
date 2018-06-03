@@ -28,7 +28,7 @@ colocation_header = 'user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,
 Utility functions
 """
 def extract_geometry(df):
-  df.sort_values(by=['latitude', 'longitue'], inplace=True)
+  df.sort_values(by=['latitude', 'longitude'], inplace=True)
   x = np.unique(df['latitude'].values)
   y = np.unique(df['longitude'].values)
   data = np.array(zip(x.ravel(), y.ravel()))
@@ -121,15 +121,17 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     counter += 1
     if write_per_user is True:
       write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
-      del colocations[:]
-      _ = gc.collect()
+      if colocations is not None:
+        del colocations[:]
+        _ = gc.collect()
     ### For every N users, shows the progress
     # report_progress(counter, start, finish, context='users', every_n=10)
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
   if write_per_user is True:
-    del colocations[:]
-    del colocations
-    _ = gc.collect()
+    if colocations is not None:
+      del colocations[:]
+      del colocations
+      _ = gc.collect()
     return None
   else:
     return colocations
@@ -198,11 +200,12 @@ def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, wr
   debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
   t0 = time.time()
   colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)
-  if not write_per_user is True:
+  if write_per_user is False:
     write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
-  del colocations[:]
-  del colocations
-  _ = gc.collect()
+    if colocations is not None:
+      del colocations[:]
+      del colocations
+      _ = gc.collect()
   elapsed = time.time() - t0
   debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
