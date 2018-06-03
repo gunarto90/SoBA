@@ -152,7 +152,6 @@ Input:
 Output:
 - Dictionary (user id, checkins) (int, dataframe)
 """
-@fn_timer
 def extract_checkins_per_user(dataset_name, mode, config):
   return extract_checkins(dataset_name, mode, config, 'user')
 
@@ -165,7 +164,6 @@ Input:
 Output:
 - Dictionary (venue id, checkins) (int, dataframe)
 """
-@fn_timer
 def extract_checkins_per_venue(dataset_name, mode, config):
   return extract_checkins(dataset_name, mode, config, 'location')
 
@@ -178,7 +176,6 @@ Input:
 Output:
 - Dictionary (checkin id, checkins) (int, dataframe)
 """
-@fn_timer
 def extract_checkins_all(dataset_name, mode, config):
   return extract_checkins(dataset_name, mode, config, 'checkin')
 
