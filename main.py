@@ -33,7 +33,7 @@ def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
   # debug('Ends', ends)
   ### Generate colocation based on extracted checkins
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
-  Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
+  Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i-1], ends[i-1], p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
   process_reduce(config, p, k, t_diff, s_diff)
   debug('Finished map-reduce for [p%d, k%d, t%d, d%d]' % (p, k, t_diff, s_diff))
 
