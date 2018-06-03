@@ -28,8 +28,9 @@ colocation_header = 'user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,
 Utility functions
 """
 def extract_geometry(df):
-  x = df['latitude'].values
-  y = df['longitude'].values
+  df.sort_values(by=['latitude', 'longitue'], inplace=True)
+  x = np.unique(df['latitude'].values)
+  y = np.unique(df['longitude'].values)
   data = np.array(zip(x.ravel(), y.ravel()))
   return data
 
@@ -39,7 +40,8 @@ def create_spatial_kd_tree(df):
   return tree
 
 def create_temporal_kd_tree(df):
-  x = df['timestamp'].values
+  df.sort_values(by=['timestamp'], inplace=True)
+  x = np.unique(df['timestamp'].values)
   data = zip(x.ravel())
   tree = spatial.KDTree(data)
   return tree
