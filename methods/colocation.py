@@ -237,7 +237,7 @@ def process_reduce(config, p, k, t_diff, s_diff):
   output = '/'.join([working_directory, dataset_name, out_format.format(p,k,t_diff,s_diff)])
   with open(output, 'wb') as fw:
     fw.write('%s' % colocation_header)
-  with open(output,'wb') as wfd:
+  with open(output,'ab') as wfd:
     for f in file_list:
         with open(f,'rb') as fd:
             shutil.copyfileobj(fd, wfd, 1024*1024*10)
