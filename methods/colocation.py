@@ -182,7 +182,8 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   for i in range(len(begins)):
     with open('/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
       f.write(colocation_header)
-      debug('Co-location part %s has been created' % '/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]))
+      # debug('Co-location part %s has been created' % '/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]))
+  debug('Each colocation part file has been created')
 
 def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
