@@ -114,7 +114,11 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
         ### Only if both temporal and spatial co-occurrence > 0
         if s_count > 0:
           ### Finding the intersection and adding colocations to the list
-          colocations.extend(extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx))
+          result = extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx)
+          if result is not None and len(result)>0:
+            colocations.extend(result)
+            del result[:]
+            del result
       ### For debugging purpose
       # if IS_DEBUG is True and j > 10:
       #   break
@@ -165,6 +169,8 @@ def extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx):
   return results
 
 def write_colocation(data, config, p, k, t, d, start, finish):
+  if data is None or len(data) < 1:
+    return
   directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
   output = io.BytesIO()
@@ -189,9 +195,10 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
     if fname.endswith(".csv"):
       if pattern.match(fname):
         remove_file_if_exists('/'.join([working_directory, fname]))
-  for i in range(len(begins)):
-    with open('/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
-      f.write(colocation_header)
+  ### Write the header for each file
+  # for i in range(len(begins)):
+  #   with open('/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
+  #     f.write(colocation_header)
       # debug('Co-location part %s has been created' % '/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]))
   debug('Each colocation part file has been created')
 
