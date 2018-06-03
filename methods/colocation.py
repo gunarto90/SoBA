@@ -13,6 +13,7 @@ import io
 import re
 import time
 import gc
+import shutil
 ### KD Tree
 from scipy import spatial
 sys.setrecursionlimit(10000)  ### To make sure recursion limit do not stop the KD-tree
@@ -213,19 +214,16 @@ def process_reduce(config, p, k, t_diff, s_diff):
   # debug(working_directory, out_format, re_format)
   make_sure_path_exists(working_directory)
   pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
-  texts = []
+  file_list = []
   for fname in os.listdir(working_directory):
     if fname.endswith(".csv"):
       if pattern.match(fname):
-        with open('/'.join([working_directory, fname]), 'r') as fr:
-          for line in fr:
-            if line.startswith('user1'):
-              continue
-            texts.append(line.strip())
+        file_list.append('/'.join([working_directory, fname]))
   output = '/'.join([working_directory, out_format.format(p,k,t_diff,s_diff)])
-  with open(output, 'w') as fw:
+  with open(output, 'wb') as fw:
     fw.write('%s' % colocation_header)
-    for s in texts:
-      fw.write('%s\n' % s)
-  del texts[:]
-  del texts
+  with open(output,'wb') as wfd:
+    for f in file_list:
+        with open(f,'rb') as fd:
+            shutil.copyfileobj(fd, wfd, 1024*1024*10)
+            #10MB per writing chunk to avoid reading big file into memory.
