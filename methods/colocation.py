@@ -30,8 +30,8 @@ Utility functions
 """
 def extract_geometry(df):
   df.sort_values(by=['latitude', 'longitude'], inplace=True)
-  x = np.unique(df['latitude'].values)
-  y = np.unique(df['longitude'].values)
+  x = df['latitude'].values
+  y = df['longitude'].values
   data = np.array(zip(x.ravel(), y.ravel()))
   return data
 
@@ -42,7 +42,7 @@ def create_spatial_kd_tree(df):
 
 def create_temporal_kd_tree(df):
   df.sort_values(by=['timestamp'], inplace=True)
-  x = np.unique(df['timestamp'].values)
+  x = df['timestamp'].values
   data = zip(x.ravel())
   tree = spatial.KDTree(data)
   return tree
@@ -125,8 +125,9 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
       #   break
     counter += 1
     if write_per_user is True:
-      write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
       if colocations is not None:
+        if len(colocations)>0:
+          write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
         del colocations[:]
         _ = gc.collect()
     ### For every N users, shows the progress
@@ -174,11 +175,12 @@ def write_colocation(data, config, p, k, t, d, start, finish):
     return
   directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
+  dataset_name = config['dataset'][p]
   output = io.BytesIO()
   writer = csv.writer(output)
   for row in data:
     writer.writerow(row)
-  with open('/'.join([directory, filename.format(p,k,t,d,start,finish)]), 'ab') as f:
+  with open('/'.join([directory, dataset_name, filename.format(p,k,t,d,start,finish)]), 'ab') as f:
     f.write(output.getvalue())
 
 """
@@ -190,15 +192,17 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   re_format = config['intermediate']['colocation_re']
   working_directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
+  dataset_name = config['dataset'][p]
   pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
-  make_sure_path_exists(working_directory)
-  for fname in os.listdir(working_directory):
+  make_sure_path_exists('/'.join([working_directory, dataset_name]))
+  for fname in os.listdir('/'.join([working_directory, dataset_name])):
     if fname.endswith(".csv"):
       if pattern.match(fname):
-        remove_file_if_exists('/'.join([working_directory, fname]))
+        remove_file_if_exists('/'.join([working_directory, dataset_name, fname]))
   ### Write the header for each file
-  # for i in range(len(begins)):
-  #   with open('/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
+  for i in range(len(begins)):
+    with open('/'.join([working_directory, dataset_name, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab') as f:
+      pass
   #     f.write(colocation_header)
       # debug('Co-location part %s has been created' % '/'.join([working_directory, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]))
   debug('Each colocation part file has been created')
@@ -221,15 +225,16 @@ def process_reduce(config, p, k, t_diff, s_diff):
   out_format = config['intermediate']['colocation']
   re_format = config['intermediate']['colocation_re']
   working_directory = config['directory']['colocation']
+  dataset_name = config['dataset'][p]
   # debug(working_directory, out_format, re_format)
-  make_sure_path_exists(working_directory)
+  make_sure_path_exists('/'.join([working_directory, dataset_name]))
   pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
   file_list = []
-  for fname in os.listdir(working_directory):
+  for fname in os.listdir('/'.join([working_directory, dataset_name])):
     if fname.endswith(".csv"):
       if pattern.match(fname):
-        file_list.append('/'.join([working_directory, fname]))
-  output = '/'.join([working_directory, out_format.format(p,k,t_diff,s_diff)])
+        file_list.append('/'.join([working_directory, dataset_name, fname]))
+  output = '/'.join([working_directory, dataset_name, out_format.format(p,k,t_diff,s_diff)])
   with open(output, 'wb') as fw:
     fw.write('%s' % colocation_header)
   with open(output,'wb') as wfd:
