@@ -9,7 +9,7 @@ from methods.colocation import process_map, process_reduce, prepare_colocation
 def init_begin_end(n_core, size):
   begin = []
   end = []
-  n_chunks = 100
+  n_chunks = 50
   iteration = n_core*n_chunks
   size_per_chunk = int(size / iteration)
   for i in range(iteration):
@@ -29,8 +29,8 @@ def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
   n_core = config['n_core']
   ### For the sake of parallelization
   begins, ends = init_begin_end(n_core, len(checkins))
-  debug('Begins', begins)
-  debug('Ends', ends)
+  # debug('Begins', begins)
+  # debug('Ends', ends)
   ### Generate colocation based on extracted checkins
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
   Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))

@@ -120,11 +120,17 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     if write_per_user is True:
       write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
       del colocations[:]
-      gc.collect()
+      _ = gc.collect()
     ### For every N users, shows the progress
-    report_progress(counter, start, finish, context='users', every_n=int((finish-start)/50))
+    # report_progress(counter, start, finish, context='users', every_n=10)
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
-  return colocations
+  if write_per_user is True:
+    del colocations[:]
+    del colocations
+    _ = gc.collect()
+    return None
+  else:
+    return colocations
 
 """
 Co-location report generation (version 1)
@@ -187,10 +193,14 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
 
 def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
+  debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
   t0 = time.time()
   colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)
   if not write_per_user is True:
     write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+  del colocations[:]
+  del colocations
+  _ = gc.collect()
   elapsed = time.time() - t0
   debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
