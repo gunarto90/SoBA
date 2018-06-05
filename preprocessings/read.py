@@ -174,7 +174,7 @@ Input:
 - mode (all, weekday, weekend)
 - config: config.json filename
 Output:
-- Dictionary (checkin id, checkins) (int, dataframe)
+- Dictionary (0, checkins) (int, dataframe) single dataframe consists of all checkins
 """
 def extract_checkins_all(dataset_name, mode, config):
   return extract_checkins(dataset_name, mode, config, 'checkin')
