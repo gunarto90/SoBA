@@ -120,9 +120,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
             colocations.extend(result)
             del result[:]
             del result
-      ### For debugging purpose
-      # if IS_DEBUG is True and j > 10:
-      #   break
+    ### Prepare for the next iteration
     counter += 1
     if write_per_user is True:
       if colocations is not None:
@@ -133,6 +131,9 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     ### For every N users, shows the progress
     # report_progress(counter, start, finish, context='users', every_n=10)
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
+  ### Clear-up memory
+  del u_i, u_j, df_i, df_j, si_tree, sj_tree, ti_tree, tj_tree, s_idx, t_idx
+  _ = gc.collect()
   if write_per_user is True:
     if colocations is not None:
       del colocations[:]
