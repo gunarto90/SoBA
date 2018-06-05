@@ -5,11 +5,13 @@
   "active_mode": ["weekend"],
 
   "kwargs": {
-    "colocation":true,
+    "colocation":false,
     "sci":false,
     "pgt":false,
     "sci_features":0,
-    "pgt_features":0
+    "pgt_features":0,
+    "sci_eval":false,
+    "pgt_eval":false
   },
 
   "__parameters_notes__": [
