@@ -209,7 +209,7 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
 
 def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
-  debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
+  debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
   t0 = time.time()
   colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)
   if write_per_user is False:
@@ -219,7 +219,7 @@ def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, wr
       del colocations
       _ = gc.collect()
   elapsed = time.time() - t0
-  debug('Process map [p%d, k%d, t%d, d%d, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
+  debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
 def process_reduce(config, p, k, t_diff, s_diff):
   out_format = config['intermediate']['colocation']
