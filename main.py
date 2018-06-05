@@ -58,10 +58,15 @@ def run_colocation(config):
           map_reduce_colocation(config, checkins, p, k, t_diff, s_diff)
 
 def main():
+  debug('Started SCI+')
   ### Read config
   config = read_config()
-  ### Co-location generation
-  run_colocation(config)
+  kwargs = config['kwargs']
+  is_run_colocation = kwargs.get('colocation')
+  if is_run_colocation is not None and is_run_colocation is True:
+    ### Co-location generation
+    run_colocation(config)
+  debug('Finished SCI+')
 
 if __name__ == '__main__':
   main()
