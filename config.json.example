@@ -9,7 +9,7 @@
       "run":false,
       "start":0,
       "finish":-1,
-      "debug":true,
+      "debug":false,
       "run_by":"user"
     },
     "sci":false,
