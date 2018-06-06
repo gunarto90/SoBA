@@ -10,7 +10,7 @@
       "start":0,
       "finish":-1,
       "debug":true,
-      "run_by":"checkin"
+      "run_by":"user"
     },
     "sci":false,
     "pgt":false,
