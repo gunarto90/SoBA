@@ -47,14 +47,6 @@ def create_temporal_kd_tree(df):
   tree = spatial.KDTree(data)
   return tree
 
-def normalize_radius_index(idx):
-  i = 0
-  out = {}
-  for x in idx:
-    out[i] = x
-    i += 1
-  return out
-
 """
 Co-location generation
 Input:
@@ -153,7 +145,7 @@ u_j     : User j's ID
 df_i    : Dataframe of user i
 df_j    : Dataframe of user j
 s_idx   : List of list of all locations within the "radius"
-t_idx   : 
+t_idx   : List of list of all locations within the "time difference"
 """
 def extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx):
   results = []
@@ -174,6 +166,17 @@ def extract_radius_search_results(u_i, u_j, df_i, df_j, s_idx, t_idx):
       results.append(obj)
   return results
 
+"""
+Write colocation results into file
+- data    : list of colocations
+- config  : configuration file
+- p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
+- k       : mode for dataset (0: all, 1: weekday, 2: weekend)
+- t       : time threshold for co-location criterion (in seconds)
+- d       : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
+- start   : the beginning index of co-location generation process (useful for parallelization)
+- finish  : the ending index of co-location generation process (useful for parallelization)
+"""
 def write_colocation(data, config, p, k, t, d, start, finish):
   if data is None or len(data) < 1:
     return
@@ -188,30 +191,33 @@ def write_colocation(data, config, p, k, t, d, start, finish):
     f.write(output.getvalue())
 
 """
-Map and Reduce
+Map and Reduce functions
 """
 
 """
-Prepare the files for the co-location generation
+Prepare the files for the co-location generation (Make sure file and directory exist)
 """
 def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   working_directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
   dataset_name = config['dataset'][p]
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
-  ### Clear all intermediate files before doing the map-reduce
-  # re_format = config['intermediate']['colocation_re']
-  # pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
-  # for fname in os.listdir('/'.join([working_directory, dataset_name])):
-  #   if fname.endswith(".csv"):
-  #     if pattern.match(fname):
-  #       remove_file_if_exists('/'.join([working_directory, dataset_name, fname]))
-  ### Prepare the file
+  ### Prepare the files
   for i in range(len(begins)):
     with open('/'.join([working_directory, dataset_name, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'wb'):
       pass
   debug('Each colocation part file has been created')
 
+"""
+Process map in the map-reduce scheme (Generating co-location list per chunk)
+- checkins: dictionary of [int, dataframe]
+- config  : configuration file
+- p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
+- k       : mode for dataset (0: all, 1: weekday, 2: weekend)
+- t_diff  : time threshold for co-location criterion (in seconds)
+- s_diff  : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
+- write_per_user : if it is True then the colocation is written to file per user (not all) -- Useful for saving memory when processing data
+"""
 def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
@@ -226,6 +232,14 @@ def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, wr
   elapsed = time.time() - t0
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
+"""
+Process reduce in the map-reduce scheme (Combining all files)
+- config  : configuration file
+- p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
+- k       : mode for dataset (0: all, 1: weekday, 2: weekend)
+- t_diff  : time threshold for co-location criterion (in seconds)
+- s_diff  : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
+"""
 def process_reduce(config, p, k, t_diff, s_diff):
   out_format = config['intermediate']['colocation']
   re_format = config['intermediate']['colocation_re']
