@@ -128,14 +128,14 @@ def extract_checkins(dataset_name, mode, config, id='user'):
     debug('#checkins', len(df))
     checkins = {}
     if id == 'checkin':
-      with open(pickle_filename, 'wb') as handle:
-        pickle.dump(df, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-      uids = df[id].unique()
-      for uid in uids:
-        checkins[uid] = df.loc[df[id] == uid]  ### Need to order by "timestamp"
-      with open(pickle_filename, 'wb') as handle:
-        pickle.dump(checkins, handle, protocol=pickle.HIGHEST_PROTOCOL)
+      df['checkin'] = range(len(df))
+    uids = df[id].unique()
+    for uid in uids:
+      checkins[uid] = df.loc[df[id] == uid]  ### Need to order by "timestamp"
+      if id == 'checkin':
+        checkins[uid].drop(columns=[id], inplace=True)
+    with open(pickle_filename, 'wb') as handle:
+      pickle.dump(checkins, handle, protocol=pickle.HIGHEST_PROTOCOL)
   else:
     with open(pickle_filename, 'rb') as handle:
       checkins = pickle.load(handle)
@@ -191,7 +191,7 @@ def main():
   datasets = config['active_dataset']
   modes = config['active_mode']
   # ids = ['user', 'location', 'checkin']
-  ids = ['location']
+  ids = config['kwargs']['extract_checkins']['ids']
   for dataset_name in datasets:
     for mode in modes:
       for id in ids:

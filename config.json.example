@@ -9,7 +9,9 @@
       "run":false,
       "start":0,
       "finish":-1,
-      "debug":true
+      "debug":true,
+      "run_by":"checkin",
+      "notes":"run by 'user' or 'venue' or 'checkin' to aggregate the check-ins in the map-reduce"
     },
     "sci":false,
     "pgt":false,
@@ -25,6 +27,9 @@
       "t_target":1800,
       "d_target":0,
       "notes":"d_target is in meters while d_input is in degrees of lat/lon"
+    },
+    "extract_checkins":{
+      "ids": ["user", "location", "checkin"]
     }
   },
 
