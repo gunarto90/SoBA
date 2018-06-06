@@ -11,7 +11,16 @@
     "sci_features":0,
     "pgt_features":0,
     "sci_eval":false,
-    "pgt_eval":false
+    "pgt_eval":false,
+    "partial_colocation":{
+      "p":1,
+      "k":2,
+      "t_input":7200,
+      "d_input":0.01,
+      "t_target":1800,
+      "d_target":0,
+      "notes":"d_target is in meters while d_input is in degrees of lat/lon"
+    }
   },
 
   "__parameters_notes__": [
