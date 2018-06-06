@@ -41,6 +41,8 @@ def init_begin_end(n_core, size, start=0, finish=-1):
       if finish >= end[i]:
         idx_finish = i+1
         break
+    if idx_start == idx_finish and idx_finish < len(end)-1:
+      idx_finish += 1
     begin = begin[idx_start:idx_finish]
     end = end[idx_start:idx_finish]
   assert len(begin) == len(end) ### Make sure the length of begin == length of end
@@ -78,7 +80,7 @@ def run_colocation(config, run_by='user'):
       ### Extracting checkins
       if run_by == 'venue': ### If extracted by each venue (Simplified SIGMOD 2013 version)
         checkins = extract_checkins_per_venue(dataset_name, mode, config)
-      elif run_by == 'checkin':
+      elif run_by == 'checkin': ### Map-reduce fashion but per check-in
         checkins = extract_checkins_all(dataset_name, mode, config)
       else: ### Default is by each user
         checkins = extract_checkins_per_user(dataset_name, mode, config)
@@ -92,9 +94,10 @@ def main():
   config = read_config()
   kwargs = config['kwargs']
   is_run_colocation = kwargs['colocation']['run']
+  run_by = kwargs['colocation']['run_by']
   if is_run_colocation is not None and is_run_colocation is True:
     ### Co-location generation
-    run_colocation(config)
+    run_colocation(config, run_by)
   debug('Finished SCI+')
 
 if __name__ == '__main__':

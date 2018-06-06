@@ -62,12 +62,12 @@ Input:
 """
 def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user):
   colocations = []
-  uids = checkins.keys()
+  ids = checkins.keys()
   counter = 0
   skip = 0
   is_debugging_colocation = config['kwargs']['colocation']['debug']
   for i in range(start, finish):
-    u_i = uids[i]
+    u_i = ids[i]
     df_i = checkins[u_i].sort_values(by=['timestamp'])
     ti_min = checkins[u_i]['timestamp'].min()-t_diff
     ti_max = checkins[u_i]['timestamp'].max()+t_diff
@@ -78,8 +78,8 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     # debug('#Checkins of User', u_i, ':', len(df_i))
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
-    for j in range(i+1, len(uids)):
-      u_j = uids[j]
+    for j in range(i+1, len(ids)):
+      u_j = ids[j]
       df_j = checkins[u_j].sort_values(by=['timestamp'])
       tj_min = checkins[u_j]['timestamp'].min()-t_diff
       tj_max = checkins[u_j]['timestamp'].max()+t_diff
@@ -126,12 +126,13 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
         if len(colocations)>0:
           write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
         del colocations[:]
-        _ = gc.collect()
+    ### Clear-up memory
+    del u_i, df_i, si_tree, ti_tree
+    _ = gc.collect()
+  del ids
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
-  ### Clear-up memory
-  del u_i, df_i, si_tree, ti_tree
-  _ = gc.collect()
   if write_per_user is True:
+    ### Delete the last colocations set if it is per-user
     if colocations is not None:
       del colocations[:]
       del colocations
