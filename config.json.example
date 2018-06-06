@@ -5,7 +5,11 @@
   "active_mode": ["weekend"],
 
   "kwargs": {
-    "colocation":false,
+    "colocation":{
+      "run":false,
+      "start":0,
+      "finish":-1
+    },
     "sci":false,
     "pgt":false,
     "sci_features":0,

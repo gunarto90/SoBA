@@ -41,7 +41,6 @@ def init_begin_end(n_core, size, start=0, finish=-1):
       if finish >= end[i]:
         idx_finish = i+1
         break
-    debug(idx_start, idx_finish)
     begin = begin[idx_start:idx_finish]
     end = end[idx_start:idx_finish]
   assert len(begin) == len(end) ### Make sure the length of begin == length of end
@@ -50,8 +49,10 @@ def init_begin_end(n_core, size, start=0, finish=-1):
 @fn_timer
 def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
   n_core = config['n_core']
+  start = config['kwargs']['colocation']['start']
+  finish = config['kwargs']['colocation']['finish']
   ### For the sake of parallelization
-  begins, ends = init_begin_end(n_core, len(checkins), start=0, finish=1000)
+  begins, ends = init_begin_end(n_core, len(checkins), start=start, finish=finish)
   debug('Begins', begins)
   debug('Ends', ends)
   ### Generate colocation based on extracted checkins
@@ -90,7 +91,7 @@ def main():
   ### Read config
   config = read_config()
   kwargs = config['kwargs']
-  is_run_colocation = kwargs.get('colocation')
+  is_run_colocation = kwargs['colocation']['run']
   if is_run_colocation is not None and is_run_colocation is True:
     ### Co-location generation
     run_colocation(config)

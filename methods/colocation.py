@@ -188,21 +188,24 @@ def write_colocation(data, config, p, k, t, d, start, finish):
 Map and Reduce
 """
 
+"""
+Prepare the files for the co-location generation
+"""
 def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
-  ### Clear all intermediate files before doing the map-reduce
-  re_format = config['intermediate']['colocation_re']
   working_directory = config['directory']['colocation']
   filename  = config['intermediate']['colocation_part']
   dataset_name = config['dataset'][p]
-  pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
-  for fname in os.listdir('/'.join([working_directory, dataset_name])):
-    if fname.endswith(".csv"):
-      if pattern.match(fname):
-        remove_file_if_exists('/'.join([working_directory, dataset_name, fname]))
-  ### Write the header for each file
+  ### Clear all intermediate files before doing the map-reduce
+  # re_format = config['intermediate']['colocation_re']
+  # pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
+  # for fname in os.listdir('/'.join([working_directory, dataset_name])):
+  #   if fname.endswith(".csv"):
+  #     if pattern.match(fname):
+  #       remove_file_if_exists('/'.join([working_directory, dataset_name, fname]))
+  ### Prepare the file
   for i in range(len(begins)):
-    with open('/'.join([working_directory, dataset_name, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'ab'):
+    with open('/'.join([working_directory, dataset_name, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'wb'):
       pass
   debug('Each colocation part file has been created')
 
