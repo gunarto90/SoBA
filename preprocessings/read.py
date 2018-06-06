@@ -128,7 +128,6 @@ def extract_checkins(dataset_name, mode, config, id='user'):
     debug('#checkins', len(df))
     checkins = {}
     if id == 'checkin':
-      checkins[0] = df
       with open(pickle_filename, 'wb') as handle:
         pickle.dump(df, handle, protocol=pickle.HIGHEST_PROTOCOL)
     else:
