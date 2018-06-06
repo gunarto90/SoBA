@@ -188,10 +188,11 @@ def main():
   # preprocess_data(dataset_root)
 
   ### Read standardized data and perform preprocessing
-  datasets = config['active_dataset']
-  modes = config['active_mode']
+  kwargs = config['kwargs']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
   # ids = ['user', 'location', 'checkin']
-  ids = config['kwargs']['extract_checkins']['ids']
+  ids = kwargs['extract_checkins']['ids']
   for dataset_name in datasets:
     for mode in modes:
       for id in ids:

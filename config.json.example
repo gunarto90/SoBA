@@ -1,17 +1,16 @@
 {
-  "n_core": 4,
-
-  "active_dataset": ["foursquare"],
-  "active_mode": ["weekend"],
-
   "kwargs": {
+    "ts": [7200],
+    "ds": [0.01],
+    "n_core": 4,
+    "active_dataset": ["foursquare"],
+    "active_mode": ["weekend"],
     "colocation":{
       "run":false,
       "start":0,
       "finish":-1,
       "debug":true,
-      "run_by":"checkin",
-      "notes":"run by 'user' or 'venue' or 'checkin' to aggregate the check-ins in the map-reduce"
+      "run_by":"checkin"
     },
     "sci":false,
     "pgt":false,
@@ -25,22 +24,26 @@
       "t_input":7200,
       "d_input":0.01,
       "t_target":1800,
-      "d_target":0,
-      "notes":"d_target is in meters while d_input is in degrees of lat/lon"
+      "d_target":0
     },
     "extract_checkins":{
       "ids": ["user", "location", "checkin"]
     }
   },
 
-  "__parameters_notes__": [
-    "ts is the time threshold for the co-location (in seconds)",
-    "ds is the distance threshold for the co-location (in degrees of latitude and longitude)",
-    "distance threshold <0.001> is approximately 111 meters (in the equator) or less depends on the distance to the Equator"
-  ],
-
-  "ts": [7200],
-  "ds": [0.01],
+  "__parameters_notes__": {
+    "threshold":[
+      "ts is the time threshold for the co-location (in seconds)",
+      "ds is the distance threshold for the co-location (in degrees of latitude and longitude)",
+      "distance threshold <0.001> is approximately 111 meters (in the equator) or less depends on the distance to the Equator"
+    ],
+    "colocation":[
+      "run by 'user' or 'venue' or 'checkin' to aggregate the check-ins in the map-reduce"
+    ],
+    "partial_colocation":[
+      "d_target is in meters while d_input is in degrees of lat/lon"
+    ]
+  },
 
   "dataset": ["gowalla", "brightkite", "foursquare"],
   "mode": ["all", "weekday", "weekend"],

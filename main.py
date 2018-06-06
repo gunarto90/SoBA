@@ -50,9 +50,10 @@ def init_begin_end(n_core, size, start=0, finish=-1):
 
 @fn_timer
 def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
-  n_core = config['n_core']
-  start = config['kwargs']['colocation']['start']
-  finish = config['kwargs']['colocation']['finish']
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  start = kwargs['colocation']['start']
+  finish = kwargs['colocation']['finish']
   ### For the sake of parallelization
   begins, ends = init_begin_end(n_core, len(checkins), start=start, finish=finish)
   debug('Begins', begins)
@@ -65,13 +66,14 @@ def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
 
 def run_colocation(config, run_by='user'):
   ### Read standardized data and perform preprocessing
-  n_core = config['n_core']
+  kwargs = config['kwargs']
   all_datasets = config['dataset']
   all_modes = config['mode']
-  datasets = config['active_dataset']
-  modes = config['active_mode']
-  t_diffs = config['ts']
-  s_diffs = config['ds']
+  n_core = kwargs['n_core']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
   for dataset_name in datasets:
     p = all_datasets.index(dataset_name)
     for mode in modes:
