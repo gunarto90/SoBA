@@ -8,7 +8,8 @@
     "colocation":{
       "run":false,
       "start":0,
-      "finish":-1
+      "finish":-1,
+      "debug":true
     },
     "sci":false,
     "pgt":false,

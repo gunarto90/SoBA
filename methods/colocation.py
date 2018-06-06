@@ -65,6 +65,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
   uids = checkins.keys()
   counter = 0
   skip = 0
+  is_debugging_colocation = config['kwargs']['colocation']['debug']
   for i in range(start, finish):
     u_i = uids[i]
     df_i = checkins[u_i].sort_values(by=['timestamp'])
@@ -115,6 +116,9 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
         del s_idx
       del sj_tree, tj_tree, t_idx, df_j, u_j
       _ = gc.collect()
+      ### For testing purpose
+      if is_debugging_colocation and j > i+11:
+        break
     ### Prepare for the next iteration
     counter += 1
     if write_per_user is True:
@@ -123,8 +127,6 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
           write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
         del colocations[:]
         _ = gc.collect()
-    ### For every N users, shows the progress
-    # report_progress(counter, start, finish, context='users', every_n=10)
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
   ### Clear-up memory
   del u_i, df_i, si_tree, ti_tree
