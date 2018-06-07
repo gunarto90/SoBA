@@ -20,10 +20,10 @@ def extract_colocation(config, p, k, t_diff_input, s_diff_input, t_diff_target, 
   df = df[(df['t_diff'] <= t_diff_target) & (df['s_diff'] <= s_diff_target)]
   debug('Filtered colocation size', len(df))
   debug('Writing colocation file', '/'.join([working_directory, filename.format(p, k, t_diff_target, s_diff_target)]))
-  df.to_csv('/'.join([working_directory, filename.format(p, k, t_diff_target, s_diff_target)]))
+  df.to_csv('/'.join([working_directory, filename.format(p, k, t_diff_target, s_diff_target)]), index=False)
 
 def main():
-  debug('Started SCI+')
+  debug('Started extracting partial colocation')
   ### Read config
   config = read_config()
   config_partial = config['kwargs']['partial_colocation']
@@ -34,6 +34,7 @@ def main():
   t_target = config_partial['t_target']
   d_target = config_partial['d_target']
   extract_colocation(config, p, k, t_input, d_input, t_target, d_target)
+  debug('Finished extracting partial colocation')
 
 if __name__ == '__main__':
   main()
