@@ -116,7 +116,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
         del s_idx
       del sj_tree, tj_tree, t_idx, df_j, u_j
       ### For testing purpose
-      if is_debugging_colocation and j > i+11:
+      if is_debugging_colocation is True and j > i+11:
         break
     ### Prepare for the next iteration
     counter += 1
