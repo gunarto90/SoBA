@@ -61,6 +61,7 @@
     "checkins_per_venue":"checkins_per_venue_{}.pickle",
     "checkins_all":"checkins_all_{}.pickle",
     "colocation":"co_raw_p{}_k{}_t{}_d{}.csv",
+    "colocation_compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
     "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
     "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv"
   }
