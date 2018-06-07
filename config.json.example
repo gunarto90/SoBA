@@ -41,7 +41,8 @@
       "run by 'user' or 'venue' or 'checkin' to aggregate the check-ins in the map-reduce"
     ],
     "partial_colocation":[
-      "d_target is in meters while d_input is in degrees of lat/lon"
+      "d_target is in meters while d_input is in degrees of lat/lon",
+      "t_target and d_target should be in decreasing order to make the code works well"
     ]
   },
 
