@@ -23,8 +23,8 @@
       "k":2,
       "t_input":7200,
       "d_input":0.01,
-      "t_target":1800,
-      "d_target":0
+      "t_target":[7200, 5400, 3600, 1800],
+      "d_target":[1000, 750, 500, 250, 0]
     },
     "extract_checkins":{
       "ids": ["user", "location", "checkin"]
