@@ -47,7 +47,7 @@ def extract_aggregated_visit(visit_per_venue, p_l):
 @fn_timer
 def read_colocation_file(config, p, k, t, d):
     ### Read co-location from file
-    is_read_compressed = config['sci']['read_compressed']
+    is_read_compressed = config['kwargs']['sci']['read_compressed']
     colocation_root = config['directory']['colocation']
     if is_read_compressed is False:
         colocation_name = config['intermediate']['colocation']
