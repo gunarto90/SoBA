@@ -206,6 +206,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     colocation_df = read_colocation_file(config, p, k, t, d)
     ### Find if the two users in the colocated check-ins are friends / stranger
     colocation_df = determine_social_tie(colocation_df, friend_df)
+    debug(colocation_df.describe())
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
     stability = calculate_stability(groups)
