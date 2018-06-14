@@ -178,26 +178,34 @@ Output:
 def extract_checkins_all(dataset_name, mode, config):
   return extract_checkins(dataset_name, mode, config, 'checkin')
 
+def extract_friendships(dataset_name, config):
+  dataset_root = config['directory']['dataset']
+  friendship_name = '/'.join([dataset_root, dataset_name, 'friend.csv'])
+  friend_df = pd.read_csv(friendship_name, names=['user1', 'user2'])
+  return friend_df
+
 @fn_timer
 def main():
   ### Read config
   config = read_config()
+  kwargs = config['kwargs']
 
   ### Read original data and generate standardized data
-  # dataset_root = config['directory']['dataset']
-  # preprocess_data(dataset_root)
+  if kwargs['preprocessing']['read_original'] is True:
+    dataset_root = config['directory']['dataset']
+    preprocess_data(dataset_root)
 
   ### Read standardized data and perform preprocessing
-  kwargs = config['kwargs']
-  datasets = kwargs['active_dataset']
-  modes = kwargs['active_mode']
-  # ids = ['user', 'location', 'checkin']
-  ids = kwargs['extract_checkins']['ids']
-  for dataset_name in datasets:
-    for mode in modes:
-      for id in ids:
-        checkins = extract_checkins(dataset_name, mode, config, id)
-        debug(len(checkins))
+  if kwargs['preprocessing']['extract_checkins'] is True:
+    datasets = kwargs['active_dataset']
+    modes = kwargs['active_mode']
+    # ids = ['user', 'location', 'checkin']
+    ids = kwargs['preprocessing']['ids']
+    for dataset_name in datasets:
+      for mode in modes:
+        for id in ids:
+          checkins = extract_checkins(dataset_name, mode, config, id)
+          debug(len(checkins))
 
 if __name__ == '__main__':
   main()
