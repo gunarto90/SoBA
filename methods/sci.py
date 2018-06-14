@@ -204,13 +204,12 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     ### Read (original) friendship from file
     friend_df = extract_friendships(dataset_names[p], config)
     colocation_df = read_colocation_file(config, p, k, t, d)
-    ### Extract the user pairs
-    user_pairs = colocation_df[['user1', 'user2']].drop_duplicates()
     ### Find if the two users in the colocated check-ins are friends / stranger
     colocation_df = determine_social_tie(colocation_df, friend_df)
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
     stability = calculate_stability(groups)
+    debug('Finished calculating stability')
     ### Extracting the basic statistic from the co-location dataset
     aggregations = {
         'lat1':'count',                         ### Frequency
@@ -230,6 +229,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
         }
     }
     grouped = groups.agg(aggregations)
+    debug('Finished calculating all aggregations')
     grouped['stability'] = stability
     ### Fix the naming schemes of column names
     grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
@@ -269,5 +269,4 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     ### Memory management
     del friend_df
     del colocation_df
-    del user_pairs
     del grouped
