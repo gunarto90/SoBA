@@ -47,8 +47,12 @@ def extract_aggregated_visit(visit_per_venue, p_l):
 @fn_timer
 def read_colocation_file(config, p, k, t, d):
     ### Read co-location from file
+    is_read_compressed = config['sci']['read_compressed']
     colocation_root = config['directory']['colocation']
-    colocation_name = config['intermediate']['colocation']  #colocation (csv) or colocation_compressed (bz2)
+    if is_read_compressed is False:
+        colocation_name = config['intermediate']['colocation']
+    else:
+        colocation_name = config['intermediate']['colocation_compressed']
     colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
     colocation_dtypes = {
         'user1':np.int64,'user2':np.int64,

@@ -14,6 +14,7 @@
     },
     "sci":{
       "run":true,
+      "read_compressed":false,
       "compress_output":false
     },
     "pgt":false,
