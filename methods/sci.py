@@ -78,7 +78,7 @@ def write_statistics(df, config, p, k, t, d):
         sci_name = config['intermediate']['sci']['evaluation']
         compression = None
     df.to_csv('/'.join([sci_root, dataset_names[p], sci_name.format(p, k, t, d)]), \
-        header=True, index=True, compression=compression)
+        header=True, index=False, compression=compression)
 
 def calculate_diversity(arr):
     if len(arr) == 1:
@@ -109,9 +109,6 @@ def calculate_popularity(arr, stat_lp):
     else:
         return 0
 
-"""
-Sigma does not work because arr is a float number instead of "array". Why?
-"""
 def calculate_sigma(arr, miu):
     result = 0.0
     max_time = max(arr)
@@ -138,8 +135,6 @@ def calculate_stability(groups):
             rho_xy = math.sqrt(sigma_xy/len(df))
             ### Final weight of the stability feature
             w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
-            debug('name', 'miu_xy', 'sigma_xy', 'rho_xy', 'w_s')
-            debug(name, miu_xy, sigma_xy, rho_xy, w_s)
             results.append(w_s)
     return np.array(results)
 
@@ -251,12 +246,16 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     grouped.drop(['location2_diversity'], axis=1, inplace=True)
     grouped.drop(['location2_popularity'], axis=1, inplace=True)
     ### Renaming columns
-    grouped.rename(columns={'lat1_count': "frequency", 
+    grouped.reset_index(inplace=True)
+    grouped.rename(columns={"lat1_count": "frequency", 
         "location1_diversity": "diversity", 
         "time1_duration":"duration",
         "location1_popularity": "popularity",
-        "stability_":"stability"
+        "stability_":"stability",
+        "user1":"uid1", "user2":"uid2"
         }, inplace=True)
+    ### Reordering the columns
+    grouped = grouped[['uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link']]
     debug(grouped.columns.values)
     ### Removing all co-location less than two co-occurrences
     grouped = grouped[(grouped['frequency'] > 1)]
