@@ -181,7 +181,10 @@ def extract_checkins_all(dataset_name, mode, config):
 def extract_friendships(dataset_name, config):
   dataset_root = config['directory']['dataset']
   friendship_name = '/'.join([dataset_root, dataset_name, 'friend.csv'])
-  friend_df = pd.read_csv(friendship_name, names=['user1', 'user2'])
+  colocation_dtypes = {
+        'user1':np.int64,'user2':np.int64
+    }
+  friend_df = pd.read_csv(friendship_name, dtype=colocation_dtypes)
   return friend_df
 
 @fn_timer
