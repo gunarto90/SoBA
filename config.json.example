@@ -12,7 +12,10 @@
       "debug":false,
       "run_by":"user"
     },
-    "sci":false,
+    "sci":{
+      "run":true,
+      "compress_output":false
+    },
     "pgt":false,
     "sci_features":0,
     "pgt_features":0,
@@ -26,7 +29,10 @@
       "t_target":[7200, 5400, 3600, 1800],
       "d_target":[1000, 750, 500, 250, 0]
     },
-    "extract_checkins":{
+    "preprocessing":{
+      "read_original":false,
+      "extract_checkins":false,
+      "extract_friendships":false,
       "ids": ["user", "location", "checkin"]
     }
   },
@@ -54,7 +60,8 @@
     "dataset": "dataset",
     "intermediate": "intermediate",
     "visual":"visual",
-    "colocation":"intermediate/colocation"
+    "colocation":"intermediate/colocation",
+    "sci":"intermediate/sci"
   },
   "intermediate": {
     "checkins_per_user":"checkins_per_user_{}.pickle",
@@ -63,6 +70,12 @@
     "colocation":"co_raw_p{}_k{}_t{}_d{}.csv",
     "colocation_compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
     "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
-    "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv"
+    "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
+    "friendship":"friendship.pickle",
+    "sci":{
+      "popularity":"sci_popularity_{}.pickle",
+      "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
+      "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
+    }
   }
 }
