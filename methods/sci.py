@@ -123,7 +123,7 @@ def calculate_sigma(arr, miu):
 
 def calculate_stability(groups):
     results = []
-    for name, df in groups:
+    for _, df in groups:
         if len(df) <= 1:
             results.append(0.0) ### No stability over 1 co-location
         else:
