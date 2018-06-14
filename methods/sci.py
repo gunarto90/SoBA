@@ -114,12 +114,7 @@ def calculate_popularity(arr, stat_lp):
         return 0
 
 def calculate_sigma(arr, miu):
-    result = 0.0
-    max_time = max(arr)
-    for i in arr:
-        result += math.pow((i/max_time)-miu,2)
-        # result += math.pow(i/len(arr)-miu,2)
-    return result
+    return sum(np.square((arr / (arr.max(axis=0) + np.spacing(0)))-miu))
 
 def calculate_stability(groups):
     results = []
@@ -141,6 +136,10 @@ def calculate_stability(groups):
             w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
             results.append(w_s)
     return np.array(results)
+
+@fn_timer
+def aggregate_statistics():
+    pass
 
 """
 Public functions
@@ -210,7 +209,6 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
     stability = calculate_stability(groups)
-    debug('Finished calculating stability')
     ### Extracting the basic statistic from the co-location dataset
     aggregations = {
         'lat1':'count',                         ### Frequency
