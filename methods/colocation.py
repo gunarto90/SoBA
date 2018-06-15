@@ -90,10 +90,12 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
       ### If there are no intersections between two users' timestamp, then skip
       if ti_max < tj_min or tj_max < ti_min:
         skip += 1
+        del df_j, u_j
         continue
       ### If the GPS coordinates have no intersections
       if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
         skip += 1
+        del df_j, u_j
         continue
       sj_tree = create_spatial_kd_tree(df_j)
       tj_tree = create_temporal_kd_tree(df_j)
