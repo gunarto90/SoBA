@@ -47,6 +47,16 @@ def create_temporal_kd_tree(df):
   tree = spatial.KDTree(data)
   return tree
 
+def get_bounding_variables(checkins, uids, t_diff, s_diff):
+  stats = {}
+  stats['t_min'] = checkins[uids]['timestamp'].min()-t_diff
+  stats['t_max'] = checkins[uids]['timestamp'].max()+t_diff
+  stats['x_min'] = checkins[uids]['longitude'].min()-s_diff
+  stats['x_max'] = checkins[uids]['longitude'].max()+s_diff
+  stats['y_min'] = checkins[uids]['latitude'].min()-s_diff
+  stats['y_max'] = checkins[uids]['latitude'].max()+s_diff
+  return stats
+
 """
 Co-location generation
 Input:
@@ -69,42 +79,32 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
   for i in range(start, finish):
     u_i = ids[i]
     df_i = checkins[u_i].sort_values(by=['timestamp'])
-    ti_min = checkins[u_i]['timestamp'].min()-t_diff
-    ti_max = checkins[u_i]['timestamp'].max()+t_diff
-    xi_min = checkins[u_i]['longitude'].min()-s_diff
-    xi_max = checkins[u_i]['longitude'].max()+s_diff
-    yi_min = checkins[u_i]['latitude'].min()-s_diff
-    yi_max = checkins[u_i]['latitude'].max()+s_diff
-    # debug('#Checkins of User', u_i, ':', len(df_i))
+    stats_i = get_bounding_variables(checkins, u_i, t_diff, s_diff)
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(ids)):
       u_j = ids[j]
       df_j = checkins[u_j].sort_values(by=['timestamp'])
-      tj_min = checkins[u_j]['timestamp'].min()-t_diff
-      tj_max = checkins[u_j]['timestamp'].max()+t_diff
-      xj_min = checkins[u_j]['longitude'].min()-s_diff
-      xj_max = checkins[u_j]['longitude'].max()+s_diff
-      yj_min = checkins[u_j]['latitude'].min()-s_diff
-      yj_max = checkins[u_j]['latitude'].max()+s_diff
+      stats_j = get_bounding_variables(checkins, u_j, t_diff, s_diff)
       ### If there are no intersections between two users' timestamp, then skip
-      if ti_max < tj_min or tj_max < ti_min:
+      if stats_i['t_max'] < stats_j['t_min'] or stats_j['t_max'] < stats_i['t_min']:
         skip += 1
-        del df_j, u_j
+        del df_j, u_j, stats_i, stats_j
         continue
       ### If the GPS coordinates have no intersections
-      if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
+      # if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
+      if not (stats_i['x_min'] < stats_j['x_max'] and stats_i['x_max'] > stats_j['x_min'] and \
+              stats_i['y_max'] > stats_j['y_min'] and stats_i['y_min'] < stats_j['y_max'] ):
         skip += 1
-        del df_j, u_j
+        del df_j, u_j, stats_i, stats_j
         continue
-      sj_tree = create_spatial_kd_tree(df_j)
       tj_tree = create_temporal_kd_tree(df_j)
       ### temporal co-occurrence
       t_idx = ti_tree.query_ball_tree(tj_tree, t_diff)
       t_count = sum(len(x) for x in t_idx)
       if t_count > 0:
-        # debug(t_count,t_idx)
         ### spatial co-occurrence
+        sj_tree = create_spatial_kd_tree(df_j)
         s_idx = si_tree.query_ball_tree(sj_tree, s_diff)
         s_count = sum(len(x) for x in s_idx)
         ### Only if both temporal and spatial co-occurrence > 0
