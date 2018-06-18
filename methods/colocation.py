@@ -89,7 +89,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
       ### If there are no intersections between two users' timestamp, then skip
       if stats_i['t_max'] < stats_j['t_min'] or stats_j['t_max'] < stats_i['t_min']:
         skip += 1
-        del df_j, u_j, stats_i, stats_j
+        del df_j, u_j, stats_j
         continue
       ### If the GPS coordinates have no intersections
       # if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
