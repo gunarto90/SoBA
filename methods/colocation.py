@@ -96,7 +96,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
       if not (stats_i['x_min'] < stats_j['x_max'] and stats_i['x_max'] > stats_j['x_min'] and \
               stats_i['y_max'] > stats_j['y_min'] and stats_i['y_min'] < stats_j['y_max'] ):
         skip += 1
-        del df_j, u_j, stats_i, stats_j
+        del df_j, u_j, stats_j
         continue
       tj_tree = create_temporal_kd_tree(df_j)
       ### temporal co-occurrence
@@ -115,8 +115,8 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
             colocations.extend(result)
             del result[:]
             del result
-        del s_idx
-      del sj_tree, tj_tree, t_idx, df_j, u_j
+        del s_idx, sj_tree
+      del tj_tree, t_idx, df_j, u_j
       ### For testing purpose
       if is_debugging_colocation is True and j > i+11:
         break
@@ -128,7 +128,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
           write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
         del colocations[:]
     ### Clear-up memory
-    del u_i, df_i, si_tree, ti_tree
+    del u_i, df_i, si_tree, ti_tree, stats_i
     _ = gc.collect()
   del ids
   debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
