@@ -116,9 +116,7 @@ def run_sci(config):
       ### Extracting checkins
       checkins = extract_checkins(config, dataset_name, mode, 'user')
       stat_lp = extract_popularity(checkins, config, p, k)
-      for t_diff in t_diffs:
-        for s_diff in s_diffs:
-          extract_colocation_features(stat_lp, config, p, k, t_diff, s_diff)
+      Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
 
 def main():
   ### Started the program
