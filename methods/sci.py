@@ -199,13 +199,14 @@ inputs:
 - d         : spatial threshold for co-location criterion (in meters -- after running "extract_partial_colocation.py)
 """
 def extract_colocation_features(stat_lp, config, p, k, t, d):
+    debug('p', p, 'k', k, 't', t, 'd', d)
     dataset_names = config['dataset']
     ### Read (original) friendship from file
     friend_df = extract_friendships(dataset_names[p], config)
     colocation_df = read_colocation_file(config, p, k, t, d)
     ### Find if the two users in the colocated check-ins are friends / stranger
     colocation_df = determine_social_tie(colocation_df, friend_df)
-    debug(colocation_df.describe())
+    debug('#colocations', len(colocation_df))
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
     stability = calculate_stability(groups)
