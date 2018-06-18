@@ -6,6 +6,7 @@ from common.functions import IS_DEBUG, read_config, debug, fn_timer
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
 from methods.colocation import process_map, process_reduce, prepare_colocation
 from methods.sci import extract_popularity, extract_colocation_features
+from preprocessings.combine import combine_colocation
 
 def init_begin_end(n_core, size, start=0, finish=-1):
   begin = []
@@ -101,9 +102,9 @@ def run_colocation(config, run_by='user'):
 def run_sci(config):
   ### Read standardized data and perform preprocessing
   kwargs = config['kwargs']
+  n_core = kwargs['n_core']
   all_datasets = config['dataset']
   all_modes = config['mode']
-  n_core = kwargs['n_core']
   datasets = kwargs['active_dataset']
   modes = kwargs['active_mode']
   t_diffs = kwargs['ts']
@@ -118,6 +119,16 @@ def run_sci(config):
       stat_lp = extract_popularity(checkins, config, p, k)
       Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
 
+def run_combine(config):
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  all_datasets = config['dataset']
+  datasets = kwargs['active_dataset']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  debug('Combining co-location datasets (weekday and weekend)', '#Core', n_core)
+  Parallel(n_jobs=n_core)(delayed(combine_colocation)(config, all_datasets.index(dataset_name), t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs for dataset_name in datasets)
+
 def main():
   ### Started the program
   debug('Started SCI+')
@@ -130,6 +141,10 @@ def main():
   if is_run_colocation is not None and is_run_colocation is True:
     ### Co-location generation
     run_colocation(config, run_by)
+  ### Combine co-location
+  is_run_combine = kwargs['combine']['run']
+  if is_run_combine is not None and is_run_combine is True:
+    run_combine(config)
   ### SCI
   is_run_sci = kwargs['sci']['run']
   if is_run_sci is not None and is_run_sci is True:
