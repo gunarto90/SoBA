@@ -30,6 +30,11 @@
       "t_target":[7200, 5400, 3600, 1800],
       "d_target":[1000, 750, 500, 250, 0]
     },
+    "combine":{
+      "run":false,
+      "read_compressed":true,
+      "compress_output":true
+    },
     "preprocessing":{
       "read_original":false,
       "extract_checkins":false,
