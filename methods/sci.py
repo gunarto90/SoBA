@@ -55,11 +55,11 @@ def read_colocation_file(config, p, k, t, d):
         colocation_name = config['intermediate']['colocation_compressed']
     colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
     colocation_dtypes = {
-        'user1':np.int64,'user2':np.int64,
-        'location1':np.int64,'location2':np.int64,
-        'time1':np.int64,'time2':np.int64,
-        'lat1':np.float64,'lon1':np.float64,'lat2':np.float64,'lon2':np.float64,
-        't_diff':np.int64,'s_diff':np.float64
+        'user1':np.int_,'user2':np.int_,
+        'location1':np.int_,'location2':np.int_,
+        'time1':np.int_,'time2':np.int_,
+        'lat1':np.float_,'lon1':np.float_,'lat2':np.float_,'lon2':np.float_,
+        't_diff':np.int_,'s_diff':np.float_
     }
     colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
     return colocation_df
