@@ -30,6 +30,8 @@ def init_begin_end(n_core, size, start=0, finish=-1):
     finish = size
   if start == 0 and finish == -1:
     pass
+  elif start == 0 and finish == 0:
+    del begin[:], end[:]
   else:
     if finish == -1:
       finish = size
@@ -51,30 +53,35 @@ def init_begin_end(n_core, size, start=0, finish=-1):
   return begin, end
 
 @fn_timer
-def map_reduce_colocation(config, checkins, p, k, t_diff, s_diff):
+def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
   kwargs = config['kwargs']
   n_core = kwargs['n_core']
   start = kwargs['colocation']['start']
   finish = kwargs['colocation']['finish']
+  order = kwargs['colocation']['order']
   ### For the sake of parallelization
-  begins, ends = init_begin_end(n_core, len(checkins), start=start, finish=finish)
+  begins, ends = init_begin_end(n_core, len(grouped), start=start, finish=finish)
   debug('Begins', begins)
   debug('Ends', ends)
   ### Generate colocation based on extracted checkins
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
-  Parallel(n_jobs=n_core)(delayed(process_map)(checkins, config, begins[i-1], ends[i-1], p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
+  ### Start from bottom
+  if order == 'ascending':
+    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
+  else:
+    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i-1], ends[i-1], p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
   process_reduce(config, p, k, t_diff, s_diff)
   debug('Finished map-reduce for [p%d, k%d, t%d, d%.3f]' % (p, k, t_diff, s_diff))
 
 def extract_checkins(config, dataset_name, mode, run_by):
   ### Extracting checkins
   if run_by == 'venue': ### If extracted by each venue (Simplified SIGMOD 2013 version)
-    checkins = extract_checkins_per_venue(dataset_name, mode, config)
+    checkins, grouped = extract_checkins_per_venue(dataset_name, mode, config)
   elif run_by == 'checkin': ### Map-reduce fashion but per check-in
-    checkins = extract_checkins_all(dataset_name, mode, config)
+    checkins, grouped = extract_checkins_all(dataset_name, mode, config)
   else: ### Default is by each user
-    checkins = extract_checkins_per_user(dataset_name, mode, config)
-  return checkins
+    checkins, grouped = extract_checkins_per_user(dataset_name, mode, config)
+  return checkins, grouped
 
 def run_colocation(config, run_by='user'):
   ### Read standardized data and perform preprocessing
@@ -92,12 +99,14 @@ def run_colocation(config, run_by='user'):
       k = all_modes.index(mode)
       debug('Run co-location on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
       ### Extracting checkins
-      checkins = extract_checkins(config, dataset_name, mode, run_by)
+      checkins, grouped = extract_checkins(config, dataset_name, mode, run_by)
       for t_diff in t_diffs:
         for s_diff in s_diffs:
-          map_reduce_colocation(config, checkins, p, k, t_diff, s_diff)
-      checkins.clear()
+          map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff)
+      checkins.drop(checkins.index, inplace=True)
+      grouped.drop(grouped.index, inplace=True)
       del checkins
+      del grouped
 
 def run_sci(config):
   ### Read standardized data and perform preprocessing
@@ -115,9 +124,11 @@ def run_sci(config):
       k = all_modes.index(mode)
       debug('Run SCI on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
       ### Extracting checkins
-      checkins = extract_checkins(config, dataset_name, mode, 'user')
+      checkins, _ = extract_checkins(config, dataset_name, mode, 'user')
       stat_lp = extract_popularity(checkins, config, p, k)
       Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
+      checkins.drop(checkins.index, inplace=True)
+      del checkins
 
 def run_combine(config):
   kwargs = config['kwargs']
@@ -154,3 +165,10 @@ def main():
 
 if __name__ == '__main__':
   main()
+
+"""
+@TODO
+- Check checkins in each related file --> make sure it is "dataframe" now instead of "dictionary"
+- Make use of "grouped" statistics to reduce the computation time needed for co-location
+- Optimize the co-location computation using "grouped" statistic and the ordered user id
+"""

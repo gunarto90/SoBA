@@ -13,18 +13,18 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer, entropy, make_sure_path_exists, is_file_exists
-from preprocessings.read import extract_friendships, checkin_of_user
+from preprocessings.read import extract_friendships, df_uid
 
 """
 Private functions
 """
 @fn_timer
-def extract_visit_per_venue(checkins):
+def extract_visit_per_venue(checkins, config):
     visit_per_venue = {}    ### Total visit in a venue (by all users)
     p_l  = []               ### #Visit of user U to each location
     uids = checkins[id].unique()
     for uid in uids:
-        df = checkin_of_user(checkins, uid)
+        df = df_uid(checkins, uid, config)
         temp = df.groupby('location')['location'].size().reset_index(name='counts')
         for row in temp.itertuples():
             current_count = visit_per_venue.get(row.location)
@@ -163,7 +163,7 @@ def extract_popularity(checkins, config, p, k):
     pickle_filename = '/'.join([pickle_directory, popularity_intermediate_file.format(modes[k])])
     if not is_file_exists(pickle_filename):
         stat_lp = {}  ### Popularity score for location l
-        visit_per_venue, p_l = extract_visit_per_venue(checkins)
+        visit_per_venue, p_l = extract_visit_per_venue(checkins, config)
         p_ul = extract_aggregated_visit(visit_per_venue, p_l)
         ### Evaluate the weight for each venue
         for vid, arr in p_ul.items():

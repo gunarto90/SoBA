@@ -15,7 +15,6 @@ sys.path.append(PWD)
 ### Local library
 from common.functions import IS_DEBUG, debug, fn_timer, make_sure_path_exists, is_file_exists, read_config
 from common.visual import gmplot
-from methods.colocation import generate_colocation
 
 RAW_CHECKIN_FILE = 'checkin.csv'
 
@@ -86,7 +85,13 @@ Read the standardized data
 """
 def read_processed(root, dataset='gowalla', mode='all', id='user'):
   filename = 'checkin_{}.csv.gz'.format(mode)
-  df = pd.read_csv('/'.join([root, dataset, filename]), names=final_column, header=0)
+  'user', 'timestamp', 'latitude', 'longitude', 'location'
+  dtypes = {
+      'user':np.int_,'timestamp':np.int_,
+      'latitude':np.float_,'longitude':np.float_,
+      'location':np.int_
+    }
+  df = pd.read_csv('/'.join([root, dataset, filename]), dtype=dtypes)
   df['u_count'] = df.groupby('user')['user'].transform('count')
   df['v_count'] = df.groupby('location')['location'].transform('count')
   ### Apply filtering
@@ -98,18 +103,27 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
     grouped = None
   else:
     aggregations = {
-      'timestamp' : ['mean', 'min', 'max'],
-      'latitude'  : ['mean', 'min', 'max'],
-      'longitude' : ['mean', 'min', 'max']
+      'timestamp' : {
+        't_avg':'mean', 
+        't_min':'min', 
+        't_max':'max'
+      },
+      'latitude' : {
+        'lat_avg':'mean', 
+        'lat_min':'min', 
+        'lat_max':'max'
+      },
+      'longitude' : {
+        'lon_avg':'mean', 
+        'lon_min':'min', 
+        'lon_max':'max'
+      }
     }
     grouped = df.groupby([id]).agg(aggregations)
     grouped.columns = grouped.columns.droplevel(level=0)
     grouped.reset_index(inplace=True)
-    grouped.rename(columns={"timestamp_mean": "t_avg", "timestamp_min": "t_min", "timestamp_max":"t_max",
-        "latitude_mean": "lat_avg", "latitude_min":"lat_min", "latitude_max":"lat_max", 
-        "longitude_mean": "lon_avg", "longitude_min":"lon_min", "longitude_max":"lon_max"
-        }, inplace=True)
     grouped.sort_values(by=['t_avg', 'lat_avg', 'lon_avg'], inplace=True)
+    grouped = grouped[[id, 't_avg', 't_min', 't_max', 'lat_avg', 'lat_min', 'lat_max', 'lon_avg', 'lon_min', 'lon_max']]
   return df, grouped
 
 def preprocess_data(root):
@@ -128,7 +142,7 @@ def extract_checkins(dataset_name, mode, config, id='user'):
   debug('Processing %s [%s] for each %s' % (dataset_name, mode, id))
   dataset_root = config['directory']['dataset']
   df, grouped = read_processed(dataset_root, dataset_name, mode, id)
-  debug('#checkins', len(df))
+  debug('#checkins', len(df), '#%ss' % id, len(grouped))
   return df, grouped
 
 """
@@ -142,7 +156,8 @@ Output:
 - Grouped dataframe based on the user
 """
 def extract_checkins_per_user(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'user')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'user')
+  return df, grouped
 
 """
 Extract all the checkins and group them on each user
@@ -155,7 +170,8 @@ Output:
 - Grouped dataframe based on the venue
 """
 def extract_checkins_per_venue(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'location')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'location')
+  return df, grouped
 
 """
 Extract all the checkins and group them on each user
@@ -168,7 +184,8 @@ Output:
 - None
 """
 def extract_checkins_all(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'checkin')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'checkin')
+  return df, grouped
 
 def extract_friendships(dataset_name, config):
   dataset_root = config['directory']['dataset']
@@ -182,7 +199,8 @@ def extract_friendships(dataset_name, config):
 """
 Retrieving the check-ins of user 'uid'
 """
-def checkin_of_user(df, uid):
+def df_uid(df, uid, config):
+  id = config['kwargs']['colocation']['run_by']
   return df.loc[df[id] == uid]
 
 @fn_timer

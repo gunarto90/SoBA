@@ -21,6 +21,7 @@ sys.setrecursionlimit(10000)  ### To make sure recursion limit do not stop the K
 PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local library
+from preprocessings.read import df_uid
 from common.functions import IS_DEBUG, fn_timer, debug, haversine, make_sure_path_exists, remove_file_if_exists, report_progress
 
 colocation_header = 'user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff\n'
@@ -47,20 +48,11 @@ def create_temporal_kd_tree(df):
   tree = spatial.KDTree(data)
   return tree
 
-def get_bounding_variables(checkins, uids, t_diff, s_diff):
-  stats = {}
-  stats['t_min'] = checkins[uids]['timestamp'].min()-t_diff
-  stats['t_max'] = checkins[uids]['timestamp'].max()+t_diff
-  stats['x_min'] = checkins[uids]['longitude'].min()-s_diff
-  stats['x_max'] = checkins[uids]['longitude'].max()+s_diff
-  stats['y_min'] = checkins[uids]['latitude'].min()-s_diff
-  stats['y_max'] = checkins[uids]['latitude'].max()+s_diff
-  return stats
-
 """
 Co-location generation
 Input:
-- checkins: dictionary of [int, dataframe]
+- checkins: dataframe of user checkins (user, timestamp, latitude, longitude, location)
+- grouped : dataframe of aggregated statistics (<id>, t_avg, t_min, t_max, lat_avg, lat_min, lat_max, lon_avg, lon_min, lon_max)
 - config  : configuration file
 - p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
 - k       : mode for dataset (0: all, 1: weekday, 2: weekend)
@@ -70,34 +62,52 @@ Input:
 - finish  : the ending index of co-location generation process (useful for parallelization)
 - write_per_user : if it is True then the colocation is written to file per user (not all) -- Useful for saving memory when processing data
 """
-def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user):
+def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, finish, write_per_user):
   colocations = []
-  ids = checkins.keys()
+  run_by = config['kwargs']['colocation']['run_by']
+  ids = grouped[run_by].values
   counter = 0
-  skip = 0
+  total_skip = 0
+  consecutive_skip = 0
   is_debugging_colocation = config['kwargs']['colocation']['debug']
+  skip_tolerance = config['kwargs']['colocation']['skip_tolerance']
   for i in range(start, finish):
     u_i = ids[i]
-    df_i = checkins[u_i].sort_values(by=['timestamp'])
-    stats_i = get_bounding_variables(checkins, u_i, t_diff, s_diff)
+    df_i = df_uid(checkins, u_i, config).sort_values(by=['timestamp', 'latitude', 'longitude'])
+    stats_i = df_uid(grouped, u_i, config)
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(ids)):
       u_j = ids[j]
-      df_j = checkins[u_j].sort_values(by=['timestamp'])
-      stats_j = get_bounding_variables(checkins, u_j, t_diff, s_diff)
+      stats_j = df_uid(grouped, u_j, config)
       ### If there are no intersections between two users' timestamp, then skip
-      if stats_i['t_max'] < stats_j['t_min'] or stats_j['t_max'] < stats_i['t_min']:
-        skip += 1
-        del df_j, u_j, stats_j
+      if stats_i['t_max'].values[0]+t_diff < stats_j['t_min'].values[0]-t_diff \
+        or stats_j['t_max'].values[0]+t_diff < stats_i['t_min'].values[0]-t_diff:
+        total_skip += 1
+        consecutive_skip += 1
+        del u_j, stats_j
         continue
+      else:
+        consecutive_skip = 0
+      if consecutive_skip > skip_tolerance:
+        debug('early stop time')
+        break
+      df_j = df_uid(checkins, u_j, config).sort_values(by=['timestamp', 'latitude', 'longitude'])
       ### If the GPS coordinates have no intersections
       # if not (xi_min < xj_max and xi_max > xj_min and yi_max > yj_min and yi_min < yj_max ):
-      if not (stats_i['x_min'] < stats_j['x_max'] and stats_i['x_max'] > stats_j['x_min'] and \
-              stats_i['y_max'] > stats_j['y_min'] and stats_i['y_min'] < stats_j['y_max'] ):
-        skip += 1
+      if not (stats_i['lat_min'].values[0]-s_diff < stats_j['lat_max'].values[0]+s_diff and \
+          stats_i['lat_max'].values[0]+s_diff > stats_j['lat_min'].values[0]-s_diff and \
+          stats_i['lon_max'].values[0]+s_diff > stats_j['lon_min'].values[0]-s_diff and \
+          stats_i['lon_min'].values[0]-s_diff < stats_j['lon_max'].values[0]+s_diff ):
+        total_skip += 1
+        consecutive_skip += 1
         del df_j, u_j, stats_j
         continue
+      else:
+        consecutive_skip = 0
+      if consecutive_skip > skip_tolerance:
+        debug('early stop spatial')
+        break
       tj_tree = create_temporal_kd_tree(df_j)
       ### temporal co-occurrence
       t_idx = ti_tree.query_ball_tree(tj_tree, t_diff)
@@ -116,7 +126,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
             del result[:]
             del result
         del s_idx, sj_tree
-      del tj_tree, t_idx, df_j, u_j
+      del tj_tree, t_idx, df_j, u_j, stats_j
       ### For testing purpose
       if is_debugging_colocation is True and j > i+11:
         break
@@ -131,7 +141,7 @@ def generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, w
     del u_i, df_i, si_tree, ti_tree, stats_i
     _ = gc.collect()
   del ids
-  debug('Skip', skip, 'user pairs due to the missing time / spatial intersections')
+  debug('Skipped', total_skip, 'user pairs due to the missing time / spatial intersections')
   if write_per_user is True:
     ### Delete the last colocations set if it is per-user
     if colocations is not None:
@@ -214,7 +224,8 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
 
 """
 Process map in the map-reduce scheme (Generating co-location list per chunk)
-- checkins: dictionary of [int, dataframe]
+- checkins: dataframe of user checkins (user, timestamp, latitude, longitude, location)
+- grouped : dataframe of aggregated statistics (<id>, t_avg, t_min, t_max, lat_avg, lat_min, lat_max, lon_avg, lon_min, lon_max)
 - config  : configuration file
 - p       : dataset (0: gowalla, 1: brightkite, 2: foursquare)
 - k       : mode for dataset (0: all, 1: weekday, 2: weekend)
@@ -222,11 +233,11 @@ Process map in the map-reduce scheme (Generating co-location list per chunk)
 - s_diff  : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
 - write_per_user : if it is True then the colocation is written to file per user (not all) -- Useful for saving memory when processing data
 """
-def process_map(checkins, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
+def process_map(checkins, grouped, config, start, finish, p, k, t_diff=1800, s_diff=0, write_per_user=True):
   ### Execute the mapping process
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] has started' % (p, k, t_diff, s_diff, start, finish))
   t0 = time.time()
-  colocations = generate_colocation(checkins, config, p, k, t_diff, s_diff, start, finish, write_per_user)
+  colocations = generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, finish, write_per_user)
   if write_per_user is False:
     write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
     if colocations is not None:

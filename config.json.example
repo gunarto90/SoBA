@@ -10,10 +10,12 @@
       "start":0,
       "finish":-1,
       "debug":false,
-      "run_by":"user"
+      "run_by":"user",
+      "order":"descending",
+      "skip_tolerance":100
     },
     "sci":{
-      "run":true,
+      "run":false,
       "read_compressed":false,
       "compress_output":false
     },
@@ -69,7 +71,6 @@
     "colocation_compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
     "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
     "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
-    "friendship":"friendship.pickle",
     "sci":{
       "popularity":"sci_popularity_{}.pickle",
       "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
@@ -79,5 +80,5 @@
 
   "dataset": ["gowalla", "brightkite", "foursquare"],
   "mode": ["all", "weekday", "weekend"],
-  "maps_api": "GOOGLE MAPS API",
+  "maps_api": "GOOGLE MAPS API"
 }
