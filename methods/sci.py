@@ -13,7 +13,7 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer, entropy, make_sure_path_exists, is_file_exists
-from preprocessings.read import extract_friendships
+from preprocessings.read import extract_friendships, checkin_of_user
 
 """
 Private functions
@@ -22,7 +22,9 @@ Private functions
 def extract_visit_per_venue(checkins):
     visit_per_venue = {}    ### Total visit in a venue (by all users)
     p_l  = []               ### #Visit of user U to each location
-    for df in checkins.values():
+    uids = checkins[id].unique()
+    for uid in uids:
+        df = checkin_of_user(checkins, uid)
         temp = df.groupby('location')['location'].size().reset_index(name='counts')
         for row in temp.itertuples():
             current_count = visit_per_venue.get(row.location)
@@ -137,10 +139,6 @@ def calculate_stability(groups):
             results.append(w_s)
     return np.array(results)
 
-@fn_timer
-def aggregate_statistics():
-    pass
-
 """
 Public functions
 """
@@ -148,7 +146,7 @@ Public functions
 """
 Extract the popularity for each venues
 inputs:
-- checkins  : checkins made by each user (dict:{int, dataframe})
+- checkins  : checkins made by each user (dataframe)
 - config    : configuration file
 - p         : dataset (0: gowalla, 1: brightkite, 2: foursquare)
 - k         : mode for dataset (0: all, 1: weekday, 2: weekend)
