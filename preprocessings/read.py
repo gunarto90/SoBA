@@ -138,7 +138,7 @@ def visualize_data(df):
   gmplot(temp)
 
 @fn_timer
-def extract_checkins(dataset_name, mode, config, id='user'):
+def extract_checkins(dataset_name, mode, config, id):
   debug('Processing %s [%s] for each %s' % (dataset_name, mode, id))
   dataset_root = config['directory']['dataset']
   df, grouped = read_processed(dataset_root, dataset_name, mode, id)

@@ -75,7 +75,7 @@ def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
 
 def extract_checkins(config, dataset_name, mode, run_by):
   ### Extracting checkins
-  if run_by == 'venue': ### If extracted by each venue (Simplified SIGMOD 2013 version)
+  if run_by == 'location': ### If extracted by each venue (Simplified SIGMOD 2013 version)
     checkins, grouped = extract_checkins_per_venue(dataset_name, mode, config)
   elif run_by == 'checkin': ### Map-reduce fashion but per check-in
     checkins, grouped = extract_checkins_all(dataset_name, mode, config)
@@ -83,7 +83,7 @@ def extract_checkins(config, dataset_name, mode, run_by):
     checkins, grouped = extract_checkins_per_user(dataset_name, mode, config)
   return checkins, grouped
 
-def run_colocation(config, run_by='user'):
+def run_colocation(config, run_by):
   ### Read standardized data and perform preprocessing
   kwargs = config['kwargs']
   all_datasets = config['dataset']
