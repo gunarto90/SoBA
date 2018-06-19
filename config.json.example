@@ -37,7 +37,6 @@
     },
     "preprocessing":{
       "read_original":false,
-      "extract_checkins":false,
       "extract_friendships":false,
       "ids": ["user", "location", "checkin"]
     }
@@ -58,10 +57,6 @@
     ]
   },
 
-  "dataset": ["gowalla", "brightkite", "foursquare"],
-  "mode": ["all", "weekday", "weekend"],
-  "maps_api": "GOOGLE MAPS API",
-
   "directory": {
     "dataset": "dataset",
     "intermediate": "intermediate",
@@ -70,9 +65,6 @@
     "sci":"intermediate/sci"
   },
   "intermediate": {
-    "checkins_per_user":"checkins_per_user_{}.pickle",
-    "checkins_per_venue":"checkins_per_venue_{}.pickle",
-    "checkins_all":"checkins_all_{}.pickle",
     "colocation":"co_raw_p{}_k{}_t{}_d{}.csv",
     "colocation_compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
     "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
@@ -84,4 +76,8 @@
       "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
     }
   }
+
+  "dataset": ["gowalla", "brightkite", "foursquare"],
+  "mode": ["all", "weekday", "weekend"],
+  "maps_api": "GOOGLE MAPS API",
 }
