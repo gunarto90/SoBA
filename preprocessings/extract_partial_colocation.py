@@ -7,7 +7,6 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Custom libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer
-from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
 from methods.colocation import process_map, process_reduce, prepare_colocation
 
 def extract_colocation(config, p, k, t_diff_input, s_diff_input, t_diff_targets, s_diff_targets):
