@@ -142,7 +142,8 @@ Output:
 - Grouped dataframe based on the user
 """
 def extract_checkins_per_user(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'user')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'user')
+  return df, grouped
 
 """
 Extract all the checkins and group them on each user
@@ -155,7 +156,8 @@ Output:
 - Grouped dataframe based on the venue
 """
 def extract_checkins_per_venue(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'location')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'location')
+  return df, grouped
 
 """
 Extract all the checkins and group them on each user
@@ -168,7 +170,8 @@ Output:
 - None
 """
 def extract_checkins_all(dataset_name, mode, config):
-  return extract_checkins(dataset_name, mode, config, 'checkin')
+  df, grouped = extract_checkins(dataset_name, mode, config, 'checkin')
+  return df, grouped
 
 def extract_friendships(dataset_name, config):
   dataset_root = config['directory']['dataset']
