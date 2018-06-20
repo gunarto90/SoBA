@@ -94,10 +94,12 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
   df = pd.read_csv('/'.join([root, dataset, filename]), dtype=dtypes)
   df['u_count'] = df.groupby('user')['user'].transform('count')
   df['v_count'] = df.groupby('location')['location'].transform('count')
+  df['visit_unique'] = df.groupby('user')['location'].transform('nunique')
   ### Apply filtering
-  ### User count > 10 and location visit > 2 (otherwise there is no co-location)
-  df = df[(df['u_count'] > 10) & (df['v_count'] > 2)]
-  df.drop(['u_count', 'v_count'], axis=1, inplace=True)
+  ### User count > 10 and location visit > 1 (otherwise there is no co-location) 
+  ### and must have visited 10 different places
+  df = df[(df['u_count'] > 10) & (df['v_count'] > 1) & (df['visit_unique'] > 10)]
+  df.drop(['u_count', 'v_count', 'visit_unique'], axis=1, inplace=True)
   ### Adding spatiotemporal information from dataframe
   if id == 'checkin':
     grouped = None
@@ -122,8 +124,21 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
     grouped = df.groupby([id]).agg(aggregations)
     grouped.columns = grouped.columns.droplevel(level=0)
     grouped.reset_index(inplace=True)
-    grouped.sort_values(by=['t_min'], inplace=True)
-    grouped = grouped[[id, 't_avg', 't_min', 't_max', 'lat_avg', 'lat_min', 'lat_max', 'lon_avg', 'lon_min', 'lon_max']]
+    grouped['t_avg'] = (grouped['t_avg']).apply(np.int64)
+    round = {
+      't_avg':0, 
+      't_min':0, 
+      't_max':0,
+      'lat_avg':2, 
+      'lat_min':2, 
+      'lat_max':2,
+      'lon_avg':2, 
+      'lon_min':2, 
+      'lon_max':2
+    }
+    grouped = grouped.round(round)
+    grouped.sort_values(by=['lon_min', 'lat_min'], inplace=True)
+    grouped = grouped[[id, 't_avg', 'lat_avg', 'lon_avg', 't_min', 't_max', 'lat_min', 'lat_max', 'lon_min', 'lon_max']]
   return df, grouped
 
 def preprocess_data(root):
