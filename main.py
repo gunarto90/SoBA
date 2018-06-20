@@ -165,10 +165,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-"""
-@TODO
-- Check checkins in each related file --> make sure it is "dataframe" now instead of "dictionary"
-- Make use of "grouped" statistics to reduce the computation time needed for co-location
-- Optimize the co-location computation using "grouped" statistic and the ordered user id
-"""

@@ -8,3 +8,4 @@ dataset/*
 visual/*
 intermediate/*
 .DS_Store
+*.ipynb

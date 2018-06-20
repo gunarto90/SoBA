@@ -96,7 +96,7 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
   df['v_count'] = df.groupby('location')['location'].transform('count')
   ### Apply filtering
   ### User count > 10 and location visit > 2 (otherwise there is no co-location)
-  df = df[(df['u_count'] > 10) & (df['v_count'] > 1)]
+  df = df[(df['u_count'] > 10) & (df['v_count'] > 2)]
   df.drop(['u_count', 'v_count'], axis=1, inplace=True)
   ### Adding spatiotemporal information from dataframe
   if id == 'checkin':
@@ -122,7 +122,7 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
     grouped = df.groupby([id]).agg(aggregations)
     grouped.columns = grouped.columns.droplevel(level=0)
     grouped.reset_index(inplace=True)
-    grouped.sort_values(by=['t_avg', 'lat_avg', 'lon_avg'], inplace=True)
+    grouped.sort_values(by=['t_min'], inplace=True)
     grouped = grouped[[id, 't_avg', 't_min', 't_max', 'lat_avg', 'lat_min', 'lat_max', 'lon_avg', 'lon_min', 'lon_max']]
   return df, grouped
 
