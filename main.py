@@ -93,6 +93,8 @@ def run_colocation(config, run_by):
   modes = kwargs['active_mode']
   t_diffs = kwargs['ts']
   s_diffs = kwargs['ds']
+  skip_tolerance = kwargs['colocation']['early_stop']
+  debug('early_stop', skip_tolerance)  
   for dataset_name in datasets:
     p = all_datasets.index(dataset_name)
     for mode in modes:

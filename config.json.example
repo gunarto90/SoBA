@@ -12,7 +12,7 @@
       "debug":false,
       "run_by":"user",
       "order":"descending",
-      "skip_tolerance":100
+      "early_stop":100
     },
     "sci":{
       "run":false,
