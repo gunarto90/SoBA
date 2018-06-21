@@ -6,7 +6,7 @@
     "active_dataset": ["foursquare"],
     "active_mode": ["weekend"],
     "colocation":{
-      "run":true,
+      "run":false,
       "start":0,
       "finish":-1,
       "debug":false,
@@ -34,8 +34,8 @@
     },
     "combine":{
       "run":false,
-      "read_compressed":true,
-      "compress_output":true
+      "read_compressed":false,
+      "compress_output":false
     },
     "preprocessing":{
       "read_original":false,
