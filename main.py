@@ -2,55 +2,11 @@
 from joblib import Parallel, delayed
 import math
 ### Custom libraries
-from common.functions import IS_DEBUG, read_config, debug, fn_timer
+from common.functions import IS_DEBUG, read_config, debug, fn_timer, init_begin_end
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
-from methods.colocation import process_map, process_reduce, prepare_colocation
+from methods.colocation import process_map, process_reduce, prepare_colocation, generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
 from preprocessings.combine import combine_colocation
-
-def init_begin_end(n_core, size, start=0, finish=-1):
-  begin = []
-  end = []
-  n_chunks = 50
-  iteration = n_core*n_chunks
-  size_per_chunk = int(size / iteration)
-  for i in range(iteration):
-    if i == 0:
-      begin.append(0)
-    else:
-      begin.append(i*size_per_chunk)
-    if i == iteration - 1:
-      end.append(size)
-    else:
-      end.append((i+1)*size_per_chunk)
-  ### If the start and finish are different from default
-  if start < 0:
-    start = 0
-  if finish > size:
-    finish = size
-  if start == 0 and finish == -1:
-    pass
-  elif start == 0 and finish == 0:
-    del begin[:], end[:]
-  else:
-    if finish == -1:
-      finish = size
-    idx_start = -1
-    idx_finish = -1
-    for i in range(len(begin)):
-      if begin[i] >= start:
-        idx_start = i
-        break
-    for i in xrange(len(end)-1, -1, -1):
-      if finish >= end[i]:
-        idx_finish = i+1
-        break
-    if idx_start == idx_finish and idx_finish < len(end)-1:
-      idx_finish += 1
-    begin = begin[idx_start:idx_finish]
-    end = end[idx_start:idx_finish]
-  assert len(begin) == len(end) ### Make sure the length of begin == length of end
-  return begin, end
 
 @fn_timer
 def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
@@ -72,6 +28,11 @@ def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
     Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i-1], ends[i-1], p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
   process_reduce(config, p, k, t_diff, s_diff)
   debug('Finished map-reduce for [p%d, k%d, t%d, d%.3f]' % (p, k, t_diff, s_diff))
+
+@fn_timer
+def map_reduce_colocation_kdtree(checkins, config, p, k, t_diff, s_diff):
+  generate_colocation_single(checkins, config, p, k, t_diff, s_diff)
+  process_reduce(config, p, k, t_diff, s_diff)
 
 def extract_checkins(config, dataset_name, mode, run_by):
   ### Extracting checkins
@@ -104,11 +65,15 @@ def run_colocation(config, run_by):
       checkins, grouped = extract_checkins(config, dataset_name, mode, run_by)
       for t_diff in t_diffs:
         for s_diff in s_diffs:
-          map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff)
+          if run_by == 'user' or run_by == 'location':
+            map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff)
+          else:
+            map_reduce_colocation_kdtree(checkins, config, p, k, t_diff, s_diff)
       checkins.drop(checkins.index, inplace=True)
-      grouped.drop(grouped.index, inplace=True)
       del checkins
-      del grouped
+      if grouped is not None:
+        grouped.drop(grouped.index, inplace=True)
+        del grouped
 
 def run_sci(config):
   ### Read standardized data and perform preprocessing

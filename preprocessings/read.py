@@ -157,7 +157,9 @@ def extract_checkins(dataset_name, mode, config, id):
   debug('Processing %s [%s] for each %s' % (dataset_name, mode, id))
   dataset_root = config['directory']['dataset']
   df, grouped = read_processed(dataset_root, dataset_name, mode, id)
-  debug('#checkins', len(df), '#%ss' % id, len(grouped))
+  debug('#checkins', len(df))
+  if grouped is not None:
+    debug('#%ss' % id, len(grouped))
   return df, grouped
 
 """
