@@ -187,6 +187,7 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
   else:
     return colocations
 
+@fn_timer
 def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_diff, s_diff, counter, finish, begins, ends):
   # debug('begins', begins, 'ends', ends)
   idx = st_tree.query_radius(data, 1)
