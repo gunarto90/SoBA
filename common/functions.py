@@ -175,3 +175,47 @@ def remove_file_if_exists(filename):
     os.remove(filename)
   except OSError:
     pass
+
+def init_begin_end(n_core, size, start=0, finish=-1):
+  begin = []
+  end = []
+  n_chunks = 50
+  iteration = n_core*n_chunks
+  size_per_chunk = int(size / iteration)
+  for i in range(iteration):
+    if i == 0:
+      begin.append(0)
+    else:
+      begin.append(i*size_per_chunk)
+    if i == iteration - 1:
+      end.append(size)
+    else:
+      end.append((i+1)*size_per_chunk)
+  ### If the start and finish are different from default
+  if start < 0:
+    start = 0
+  if finish > size:
+    finish = size
+  if start == 0 and finish == -1:
+    pass
+  elif start == 0 and finish == 0:
+    del begin[:], end[:]
+  else:
+    if finish == -1:
+      finish = size
+    idx_start = -1
+    idx_finish = -1
+    for i in range(len(begin)):
+      if begin[i] >= start:
+        idx_start = i
+        break
+    for i in xrange(len(end)-1, -1, -1):
+      if finish >= end[i]:
+        idx_finish = i+1
+        break
+    if idx_start == idx_finish and idx_finish < len(end)-1:
+      idx_finish += 1
+    begin = begin[idx_start:idx_finish]
+    end = end[idx_start:idx_finish]
+  assert len(begin) == len(end) ### Make sure the length of begin == length of end
+  return begin, end

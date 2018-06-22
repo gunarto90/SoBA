@@ -12,8 +12,8 @@ from methods.colocation import process_map, process_reduce, prepare_colocation
 def extract_colocation(config, p, k, t_diff_input, s_diff_input, t_diff_targets, s_diff_targets):
   ### Format: user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff
   working_directory = config['directory']['colocation']
-  in_filename  = config['intermediate']['colocation']
-  out_filename = config['intermediate']['colocation_compressed']
+  in_filename  = config['intermediate']['colocation']['csv']
+  out_filename = config['intermediate']['colocation']['compressed']
   debug('Reading colocation file', '/'.join([working_directory, in_filename.format(p, k, t_diff_input, s_diff_input)]))
   df = pd.read_csv('/'.join([working_directory, in_filename.format(p, k, t_diff_input, s_diff_input)]))
   debug('Original colocation size', len(df))

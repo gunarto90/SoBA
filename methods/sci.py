@@ -52,9 +52,9 @@ def read_colocation_file(config, p, k, t, d):
     is_read_compressed = config['kwargs']['sci']['read_compressed']
     colocation_root = config['directory']['colocation']
     if is_read_compressed is False:
-        colocation_name = config['intermediate']['colocation']
+        colocation_name = config['intermediate']['colocation']['csv']
     else:
-        colocation_name = config['intermediate']['colocation_compressed']
+        colocation_name = config['intermediate']['colocation']['compressed']
     colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
     colocation_dtypes = {
         'user1':np.int_,'user2':np.int_,

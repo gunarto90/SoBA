@@ -14,15 +14,19 @@ import re
 import time
 import gc
 import shutil
+from sklearn.externals import joblib as sk_joblib
+from joblib import Parallel, delayed
 ### KD Tree
 from scipy import spatial
 sys.setrecursionlimit(10000)  ### To make sure recursion limit do not stop the KD-tree
+import sklearn.neighbors
 ### Setup Directories for local library
 PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local library
 from preprocessings.read import df_uid
-from common.functions import IS_DEBUG, fn_timer, debug, haversine, make_sure_path_exists, remove_file_if_exists, report_progress
+from common.functions import IS_DEBUG, fn_timer, debug, haversine, make_sure_path_exists, remove_file_if_exists, \
+  report_progress, is_file_exists, init_begin_end
 
 colocation_header = 'user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff\n'
 
@@ -46,6 +50,19 @@ def create_temporal_kd_tree(df):
   tree = spatial.KDTree(data)
   return tree
 
+def extract_spatiotemporal_normalized(df, t_diff, s_diff):
+  x = df['latitude'].values/s_diff
+  y = df['longitude'].values/s_diff
+  t = df['timestamp'].values/t_diff
+  data = np.stack((x, y, t), axis=-1)
+  return data
+
+def create_spatiotemporal_kd_tree(df, kdtree_intermediate, t_diff, s_diff):
+  data = extract_spatiotemporal_normalized(df, t_diff, s_diff)
+  tree = sklearn.neighbors.KDTree(data)
+  sk_joblib.dump(tree, kdtree_intermediate)
+  return tree
+
 """
 Co-location generation
 Input:
@@ -63,7 +80,8 @@ Input:
 def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, finish, write_per_instance):
   colocations = []
   run_by = config['kwargs']['colocation']['run_by']
-  ids = grouped[run_by].values
+  if grouped is not None:
+    ids = grouped[run_by].values
   counter = 0
   total_skip = 0
   is_debugging_colocation = config['kwargs']['colocation']['debug']
@@ -74,54 +92,57 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
       break
     u_i = ids[i]
     df_i = df_uid(checkins, u_i, config)
-    stats_i = df_uid(grouped, u_i, config)
+    if grouped is not None:
+      stats_i = df_uid(grouped, u_i, config)
     si_tree = create_spatial_kd_tree(df_i)
     ti_tree = create_temporal_kd_tree(df_i)
     for j in range(i+1, len(ids)):
       u_j = ids[j]
-      stats_j = df_uid(grouped, u_j, config)
-      ### If there are no intersections between two users' timestamp, then skip
-      if stats_i['t_max'].values[0]+t_diff < stats_j['t_min'].values[0] \
-        or stats_j['t_max'].values[0]+t_diff < stats_i['t_min'].values[0]:
-        total_skip += 1
-        consecutive_skip += 1
-        # debug(i, j, 'consecutive_skip', consecutive_skip, 
-        #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
-        #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
-        #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
-        #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
-        # )
-        del u_j, stats_j
-        if consecutive_skip > skip_tolerance and skip_tolerance > 0:
-          # debug('early stop time')
-          total_skip += len(ids)-j-1
-          break
-        else:
-          continue
+      if grouped is not None:
+        stats_j = df_uid(grouped, u_j, config)
+        ### If there are no intersections between two users' timestamp, then skip
+        if stats_i['t_max'].values[0]+t_diff < stats_j['t_min'].values[0] \
+          or stats_j['t_max'].values[0]+t_diff < stats_i['t_min'].values[0]:
+          total_skip += 1
+          consecutive_skip += 1
+          # debug(i, j, 'consecutive_skip', consecutive_skip, 
+          #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
+          #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
+          #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
+          #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
+          # )
+          del u_j, stats_j
+          if consecutive_skip > skip_tolerance and skip_tolerance > 0:
+            # debug('early stop time')
+            total_skip += len(ids)-j-1
+            break
+          else:
+            continue
       df_j = df_uid(checkins, u_j, config)
-      ### If the GPS coordinates have no intersections
-      if( stats_i['lat_min'].values[0] > stats_j['lat_max'].values[0]+s_diff or \
-          stats_i['lat_max'].values[0]+s_diff < stats_j['lat_min'].values[0] or \
-          stats_i['lon_min'].values[0] > stats_j['lon_max'].values[0]+s_diff or \
-          stats_i['lon_max'].values[0]+s_diff < stats_j['lon_min'].values[0] 
-      ):
-        total_skip += 1
-        consecutive_skip += 1
-        # debug(i, j, 'consecutive_skip', consecutive_skip, 
-        #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
-        #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
-        #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
-        #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
-        # )
-        del df_j, u_j, stats_j
-        if consecutive_skip > skip_tolerance and skip_tolerance > 0:
-          # debug('early stop spatial')
-          total_skip += len(ids)-j-1
-          break
+      if grouped is not None:
+        ### If the GPS coordinates have no intersections
+        if( stats_i['lat_min'].values[0] > stats_j['lat_max'].values[0]+s_diff or \
+            stats_i['lat_max'].values[0]+s_diff < stats_j['lat_min'].values[0] or \
+            stats_i['lon_min'].values[0] > stats_j['lon_max'].values[0]+s_diff or \
+            stats_i['lon_max'].values[0]+s_diff < stats_j['lon_min'].values[0] 
+        ):
+          total_skip += 1
+          consecutive_skip += 1
+          # debug(i, j, 'consecutive_skip', consecutive_skip, 
+          #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
+          #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
+          #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
+          #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
+          # )
+          del df_j, u_j, stats_j
+          if consecutive_skip > skip_tolerance and skip_tolerance > 0:
+            # debug('early stop spatial')
+            total_skip += len(ids)-j-1
+            break
+          else:
+            continue
         else:
-          continue
-      else:
-        consecutive_skip = 0
+          consecutive_skip = 0
       tj_tree = create_temporal_kd_tree(df_j)
       ### temporal co-occurrence
       t_idx = ti_tree.query_ball_tree(tj_tree, t_diff)
@@ -166,6 +187,50 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
   else:
     return colocations
 
+def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_diff, s_diff, start, finish):
+  t0 = time.time()
+  idx = st_tree.query_radius(data, 1)
+  count = sum(len(x) for x in idx)
+  if count > 0:
+    colocations = extract_spatiotemporal_search_results(checkins, idx, start)
+    write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+    if colocations is not None:
+      del colocations[:]
+      del colocations
+  elapsed = time.time() - t0
+  del idx
+  debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
+
+def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
+  dataset_name = config['dataset'][p]
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  start = kwargs['colocation']['start']
+  finish = kwargs['colocation']['finish']
+  order = kwargs['colocation']['order']
+  working_directory = '/'.join([config['directory']['intermediate'], dataset_name])
+  make_sure_path_exists(working_directory)
+  kdtree_intermediate = '/'.join([working_directory, config['intermediate']['colocation']['kdtree'].format(p, k)])
+  if is_file_exists(kdtree_intermediate):
+    st_tree = sk_joblib.load(kdtree_intermediate)
+  else:
+    st_tree = create_spatiotemporal_kd_tree(checkins, kdtree_intermediate, t_diff, s_diff)
+  other = extract_spatiotemporal_normalized(checkins, t_diff, s_diff)
+  begins, ends = init_begin_end(n_core, len(checkins), start=start, finish=finish)
+  # debug('Begins', begins)
+  # debug('Ends', ends)
+  ### Generate colocation based on extracted checkins
+  prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
+  ### Start from bottom
+  if order == 'ascending':
+    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i]:ends[i]], \
+      p, k, t_diff, s_diff, begins[i], ends[i]) \
+      for i in range(len(begins)))
+  else:
+    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i-1]:ends[i-1]], \
+      p, k, t_diff, s_diff, begins[i-1], ends[i-1]) \
+      for i in xrange(len(begins), 0, -1))
+
 """
 Co-location report generation (version 1)
 df_i    : Dataframe of user i
@@ -182,6 +247,8 @@ def extract_radius_search_results(df_i, df_j, s_idx, t_idx):
     for j in temp:
       di = df_i.iloc[i].round(3)
       dj = df_j.iloc[j].round(3)
+      if int(di['user']) == int(dj['user']):
+        continue
       ### Format: user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff
       t_diff = int(math.fabs(di['timestamp'] - dj['timestamp']))
       s_diff = round(haversine(di['latitude'], di['longitude'], dj['latitude'], dj['longitude']), 2)
@@ -191,6 +258,35 @@ def extract_radius_search_results(df_i, df_j, s_idx, t_idx):
       )
       results.append(obj)
   return results
+
+"""
+Co-location report generation (version 1)
+checkins: dataframe of user checkins (user, timestamp, latitude, longitude, location)
+idx     : List of index of the user who are within the "radius"
+i       : Index of the user
+"""
+def extract_spatiotemporal_search_results(checkins, idx, offset):
+  results = []
+  for x in range(len(idx)):
+    i = x + offset
+    temp = idx[x]
+    for j in temp:
+      ### No need to add the same "check-in" as co-location
+      if i == j:
+        continue
+      di = checkins.iloc[i].round(3)
+      dj = checkins.iloc[j].round(3)
+      if int(di['user']) == int(dj['user']):
+        continue
+      ### Format: user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff
+      t_diff = int(math.fabs(di['timestamp'] - dj['timestamp']))
+      s_diff = round(haversine(di['latitude'], di['longitude'], dj['latitude'], dj['longitude']), 2)
+      obj = (int(di['user']), int(dj['user']), int(di['location']), int(dj['location']), di['timestamp'],dj['timestamp'],
+        di['latitude'], di['longitude'], dj['latitude'], dj['longitude'],
+        t_diff, s_diff
+      )
+      results.append(np.asarray(obj))
+  return np.array(results)
 
 """
 Write colocation results into file
@@ -207,7 +303,7 @@ def write_colocation(data, config, p, k, t, d, start, finish):
   if data is None or len(data) < 1:
     return
   directory = config['directory']['colocation']
-  filename  = config['intermediate']['colocation_part']
+  filename  = config['intermediate']['colocation']['part']
   dataset_name = config['dataset'][p]
   output = io.BytesIO()
   writer = csv.writer(output)
@@ -225,7 +321,7 @@ Prepare the files for the co-location generation (Make sure file and directory e
 """
 def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   working_directory = config['directory']['colocation']
-  filename  = config['intermediate']['colocation_part']
+  filename  = config['intermediate']['colocation']['part']
   dataset_name = config['dataset'][p]
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
   ### Prepare the files
@@ -268,8 +364,8 @@ Process reduce in the map-reduce scheme (Combining all files)
 - s_diff  : spatial threshold for co-location criterion (in lat/lon degree) (1 degree = 111 Km)
 """
 def process_reduce(config, p, k, t_diff, s_diff):
-  out_format = config['intermediate']['colocation']
-  re_format = config['intermediate']['colocation_re']
+  out_format = config['intermediate']['colocation']['csv']
+  re_format = config['intermediate']['colocation']['re']
   working_directory = config['directory']['colocation']
   dataset_name = config['dataset'][p]
   # debug(working_directory, out_format, re_format)

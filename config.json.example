@@ -2,7 +2,7 @@
   "kwargs": {
     "ts": [7200],
     "ds": [0.01],
-    "n_core": 4,
+    "n_core": 6,
     "active_dataset": ["foursquare"],
     "active_mode": ["weekend"],
     "colocation":{
@@ -10,9 +10,9 @@
       "start":0,
       "finish":-1,
       "debug":false,
-      "run_by":"user",
-      "order":"descending",
-      "early_stop":100
+      "run_by":"checkin",
+      "order":"ascending",
+      "early_stop":0
     },
     "sci":{
       "run":false,
@@ -25,7 +25,7 @@
     "sci_eval":false,
     "pgt_eval":false,
     "partial_colocation":{
-      "p":1,
+      "p":2,
       "k":2,
       "t_input":7200,
       "d_input":0.01,
@@ -34,8 +34,8 @@
     },
     "combine":{
       "run":false,
-      "read_compressed":true,
-      "compress_output":true
+      "read_compressed":false,
+      "compress_output":false
     },
     "preprocessing":{
       "read_original":false,
@@ -57,7 +57,7 @@
       "d_target is in meters while d_input is in degrees of lat/lon",
       "t_target and d_target should be in decreasing order to make the code works well"
     ]
-  },
+  },  
 
   "directory": {
     "dataset": "dataset",
@@ -67,16 +67,19 @@
     "sci":"intermediate/sci"
   },
   "intermediate": {
-    "colocation":"co_raw_p{}_k{}_t{}_d{}.csv",
-    "colocation_compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
-    "colocation_part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
-    "colocation_re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
+    "colocation":{
+      "csv":"co_raw_p{}_k{}_t{}_d{}.csv",
+      "compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
+      "part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
+      "re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
+      "kdtree":"kd_tree_p{}_k{}.pickle.bz2"
+    },
     "sci":{
       "popularity":"sci_popularity_{}.pickle",
       "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
       "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
     }
-  }
+  },
 
   "dataset": ["gowalla", "brightkite", "foursquare"],
   "mode": ["all", "weekday", "weekend"],
