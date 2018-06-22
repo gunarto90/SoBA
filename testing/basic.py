@@ -49,7 +49,10 @@ def test1():
       locs = checkins['location'].unique()
       debug('#location', len(locs))
       pd.set_option('display.max_columns', 10)
-      debug(grouped.head(30))
+      debug(grouped.describe())
+      friend_match_checkin = friend_df.isin(uids)
+      friend_df = friend_df[friend_match_checkin['user1'] & friend_match_checkin['user2']]
+      debug('#friend w/ checkins', len(friend_df))
   debug('Finished Test on SCI+')
 
 if __name__ == '__main__':
