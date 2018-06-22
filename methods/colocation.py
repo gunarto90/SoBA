@@ -105,15 +105,8 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
           or stats_j['t_max'].values[0]+t_diff < stats_i['t_min'].values[0]:
           total_skip += 1
           consecutive_skip += 1
-          # debug(i, j, 'consecutive_skip', consecutive_skip, 
-          #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
-          #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
-          #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
-          #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
-          # )
           del u_j, stats_j
           if consecutive_skip > skip_tolerance and skip_tolerance > 0:
-            # debug('early stop time')
             total_skip += len(ids)-j-1
             break
           else:
@@ -128,15 +121,8 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
         ):
           total_skip += 1
           consecutive_skip += 1
-          # debug(i, j, 'consecutive_skip', consecutive_skip, 
-          #   stats_i['lat_min'].values[0], stats_j['lat_min'].values[0], \
-          #   stats_i['lat_max'].values[0], stats_j['lat_max'].values[0], \
-          #   stats_i['lon_min'].values[0], stats_j['lon_min'].values[0], \
-          #   stats_i['lon_max'].values[0], stats_j['lon_max'].values[0], \
-          # )
           del df_j, u_j, stats_j
           if consecutive_skip > skip_tolerance and skip_tolerance > 0:
-            # debug('early stop spatial')
             total_skip += len(ids)-j-1
             break
           else:
@@ -194,7 +180,10 @@ def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_dif
   if count > 0:
     colocations = extract_spatiotemporal_search_results(checkins, idx, start)
     write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+    if colocations is not None:
+      del colocations
   elapsed = time.time() - t0
+  del idx
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
 def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
@@ -213,8 +202,6 @@ def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
     st_tree = create_spatiotemporal_kd_tree(checkins, kdtree_intermediate, t_diff, s_diff)
   other = extract_spatiotemporal_normalized(checkins, t_diff, s_diff)
   begins, ends = init_begin_end(n_core, len(checkins), start=start, finish=finish)
-  # debug('Begins', begins)
-  # debug('Ends', ends)
   ### Generate colocation based on extracted checkins
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
   ### Start from bottom
@@ -364,7 +351,6 @@ def process_reduce(config, p, k, t_diff, s_diff):
   re_format = config['intermediate']['colocation']['re']
   working_directory = config['directory']['colocation']
   dataset_name = config['dataset'][p]
-  # debug(working_directory, out_format, re_format)
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
   pattern = re.compile(re_format.format(p,k,t_diff,s_diff))
   file_list = []
