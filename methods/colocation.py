@@ -187,15 +187,15 @@ def generate_colocation(checkins, grouped, config, p, k, t_diff, s_diff, start, 
   else:
     return colocations
 
-@fn_timer
-def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_diff, s_diff, counter, finish, begins, ends):
-  # debug('begins', begins, 'ends', ends)
+def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_diff, s_diff, start, finish):
+  t0 = time.time()
   idx = st_tree.query_radius(data, 1)
   count = sum(len(x) for x in idx)
   if count > 0:
-    colocations = extract_spatiotemporal_search_results(checkins, idx, begins)
-    write_colocation(colocations, config, p, k, t_diff, s_diff, begins, ends)
-  report_progress(counter, 0, finish, context='execute_parallel_st_tree_single', every_n=25)
+    colocations = extract_spatiotemporal_search_results(checkins, idx, start)
+    write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+  elapsed = time.time() - t0
+  debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
 def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
   dataset_name = config['dataset'][p]
@@ -219,10 +219,12 @@ def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
   ### Start from bottom
   if order == 'ascending':
-    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i]:ends[i]], p, k, t_diff, s_diff, i, len(begins), begins[i], ends[i]) \
+    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i]:ends[i]], \
+      p, k, t_diff, s_diff, begins[i], ends[i]) \
       for i in range(len(begins)))
   else:
-    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i-1]:ends[i-1]], p, k, t_diff, s_diff, i-1, len(begins), begins[i-1], ends[i-1]) \
+    Parallel(n_jobs=n_core)(delayed(execute_parallel_st_tree_single)(checkins, config, st_tree, other[begins[i-1]:ends[i-1]], \
+      p, k, t_diff, s_diff, begins[i-1], ends[i-1]) \
       for i in xrange(len(begins), 0, -1))
 
 """
