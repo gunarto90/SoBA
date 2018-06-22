@@ -26,7 +26,7 @@ sys.path.append(PWD)
 ### Local library
 from preprocessings.read import df_uid
 from common.functions import IS_DEBUG, fn_timer, debug, haversine, make_sure_path_exists, remove_file_if_exists, \
-  report_progress, is_file_exists, init_begin_end
+  report_progress, is_file_exists, init_begin_end, remove_all_files
 
 colocation_header = 'user1,user2,location1,location2,time1,time2,lat1,lon1,lat2,lon2,t_diff,s_diff\n'
 
@@ -308,6 +308,9 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   filename  = config['intermediate']['colocation']['part']
   dataset_name = config['dataset'][p]
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
+  clear_dir = config['kwargs']['colocation']['clear_dir']
+  if clear_dir is True:
+    remove_all_files('/'.join([working_directory, dataset_name]))
   ### Prepare the files
   for i in range(len(begins)):
     with open('/'.join([working_directory, dataset_name, filename.format(p,k,t_diff,s_diff,begins[i],ends[i])]), 'wb'):

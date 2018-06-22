@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 import os
+import shutil
 import json
 import sys
 from datetime import datetime, date
@@ -175,6 +176,17 @@ def remove_file_if_exists(filename):
     os.remove(filename)
   except OSError:
     pass
+
+def remove_all_files(folder, remove_dir=False):
+  for the_file in os.listdir(folder):
+    file_path = os.path.join(folder, the_file)
+    try:
+        if os.path.isfile(file_path):
+          os.unlink(file_path)
+        elif os.path.isdir(file_path) and remove_dir is True: 
+          shutil.rmtree(file_path)
+    except Exception as e:
+        print(e)
 
 def init_begin_end(n_core, size, start=0, finish=-1):
   begin = []

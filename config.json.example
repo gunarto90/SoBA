@@ -12,7 +12,8 @@
       "debug":false,
       "run_by":"checkin",
       "order":"ascending",
-      "early_stop":0
+      "early_stop":0,
+      "clear_dir":false
     },
     "sci":{
       "run":false,
@@ -34,8 +35,8 @@
     "pgt_features":0,
     "pgt_eval":false,
     "partial_colocation":{
-      "p":2,
-      "k":2,
+      "p":[2],
+      "k":[2],
       "t_input":7200,
       "d_input":0.01,
       "t_target":[7200, 5400, 3600, 1800],
