@@ -194,7 +194,11 @@ def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_dif
   if count > 0:
     colocations = extract_spatiotemporal_search_results(checkins, idx, start)
     write_colocation(colocations, config, p, k, t_diff, s_diff, start, finish)
+    if colocations is not None:
+      del colocations[:]
+      del colocations
   elapsed = time.time() - t0
+  del idx
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
 def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
