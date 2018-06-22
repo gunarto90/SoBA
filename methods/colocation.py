@@ -308,11 +308,7 @@ def prepare_colocation(config, p, k, t_diff, s_diff, begins, ends):
   filename  = config['intermediate']['colocation']['part']
   dataset_name = config['dataset'][p]
   make_sure_path_exists('/'.join([working_directory, dataset_name]))
-<<<<<<< HEAD
   clear_dir = config['kwargs']['colocation']['clear_dir']
-=======
-  clear_dir = config['kwatgs']['colocation']['clear_dir']
->>>>>>> 85b16247c7f1c804d56479b6621b3885b3141683
   if clear_dir is True:
     remove_all_files('/'.join([working_directory, dataset_name]))
   ### Prepare the files
