@@ -2,7 +2,7 @@
   "kwargs": {
     "ts": [7200],
     "ds": [0.01],
-    "n_core": 6,
+    "n_core": 4,
     "active_dataset": ["foursquare"],
     "active_mode": ["weekend"],
     "colocation":{
@@ -19,10 +19,19 @@
       "read_compressed":false,
       "compress_output":false
     },
+    "sci_eval":{
+      "run":false,
+      "read_compressed":true,
+      "features":"summary_old_new",
+      "sampling":["original"],
+      "kfold":5,
+      "features_options":[
+        "pakdd_2017_all", "pakdd_2017_summary", "all_features", "summary", "summary_old_new"
+      ],
+      "sampling_options":["original", "over", "under", "combo"]
+    },
     "pgt":false,
-    "sci_features":0,
     "pgt_features":0,
-    "sci_eval":false,
     "pgt_eval":false,
     "partial_colocation":{
       "p":2,
@@ -64,7 +73,8 @@
     "intermediate": "intermediate",
     "visual":"visual",
     "colocation":"intermediate/colocation",
-    "sci":"intermediate/sci"
+    "sci":"intermediate/sci",
+    "report":"reports"
   },
   "intermediate": {
     "colocation":{

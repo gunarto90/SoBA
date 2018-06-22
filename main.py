@@ -6,6 +6,7 @@ from common.functions import IS_DEBUG, read_config, debug, fn_timer, init_begin_
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
 from methods.colocation import process_map, process_reduce, prepare_colocation, generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
+from methods.sci_eval import sci_evaluation
 from preprocessings.combine import combine_colocation
 
 @fn_timer
@@ -97,6 +98,24 @@ def run_sci(config):
       checkins.drop(checkins.index, inplace=True)
       del checkins
 
+def run_sci_eval(config):
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  all_datasets = config['dataset']
+  all_modes = config['mode']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  for dataset_name in datasets:
+    p = all_datasets.index(dataset_name)
+    for mode in modes:
+      k = all_modes.index(mode)
+      debug('Run SCI Evaluation on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
+      for t_diff in t_diffs:
+        for s_diff in s_diffs:
+          sci_evaluation(config, p, k, t_diff, s_diff)
+
 def run_combine(config):
   kwargs = config['kwargs']
   n_core = kwargs['n_core']
@@ -114,19 +133,23 @@ def main():
   config = read_config()
   kwargs = config['kwargs']
   ### Co-location
-  is_run_colocation = kwargs['colocation']['run']
+  is_run = kwargs['colocation']['run']
   run_by = kwargs['colocation']['run_by']
-  if is_run_colocation is not None and is_run_colocation is True:
+  if is_run is not None and is_run is True:
     ### Co-location generation
     run_colocation(config, run_by)
   ### Combine co-location
-  is_run_combine = kwargs['combine']['run']
-  if is_run_combine is not None and is_run_combine is True:
+  is_run = kwargs['combine']['run']
+  if is_run is not None and is_run is True:
     run_combine(config)
   ### SCI
-  is_run_sci = kwargs['sci']['run']
-  if is_run_sci is not None and is_run_sci is True:
+  is_run = kwargs['sci']['run']
+  if is_run is not None and is_run is True:
     run_sci(config)
+  ### SCI Evaluation
+  is_run = kwargs['sci_eval']['run']
+  if is_run is not None and is_run is True:
+    run_sci_eval(config)
   ### Finished the program
   debug('Finished SCI+')
 

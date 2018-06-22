@@ -184,6 +184,7 @@ def execute_parallel_st_tree_single(checkins, config, st_tree, data, p, k, t_dif
       del colocations
   elapsed = time.time() - t0
   del idx
+  gc.collect()
   debug('Process map [p%d, k%d, t%d, d%.3f, start%d, finish%d] finished in %s seconds' % (p, k, t_diff, s_diff, start, finish, elapsed))
 
 def generate_colocation_single(checkins, config, p, k, t_diff, s_diff):
