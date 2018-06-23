@@ -22,7 +22,7 @@ Private functions
 def extract_visit_per_venue(checkins, config):
     visit_per_venue = {}    ### Total visit in a venue (by all users)
     p_l  = []               ### #Visit of user U to each location
-    uids = checkins[id].unique()
+    uids = checkins['user'].unique()
     for uid in uids:
         df = df_uid(checkins, uid, config)
         temp = df.groupby('location')['location'].size().reset_index(name='counts')
