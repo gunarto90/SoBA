@@ -119,27 +119,6 @@ def calculate_popularity(arr, stat_lp):
 def calculate_sigma(arr, miu):
     return sum(np.square((arr / (arr.max(axis=0) + np.spacing(0)))-miu))
 
-def calculate_stability(groups):
-    results = []
-    for _, df in groups:
-        if len(df) <= 1:
-            results.append(0.0) ### No stability over 1 co-location
-        else:
-            ### Calculate the stability
-            df['time_avg'] = (df['time1']+df['time2'])/2
-            ### Average meeting time between each co-location
-            df['diff'] = df['time_avg'].diff()
-            miu_xy = (df['diff'].sum(skipna=True)/len(df))
-            max_timediff = df['diff'].max(skipna=True)
-            ### Average standard deviation of co-location time
-            sigma_xy = calculate_sigma(df['time_avg'].values, miu_xy)
-            ### Density of each co-location
-            rho_xy = math.sqrt(sigma_xy/len(df))
-            ### Final weight of the stability feature
-            w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
-            results.append(w_s)
-    return np.array(results)
-
 def calculate_stability_simple(arr):
     diff = arr.diff()
     miu_xy = diff.sum(skipna=True)/len(arr)
@@ -204,7 +183,6 @@ def extract_popularity(checkins, config, p, k):
 
 def aggregate_stats(groups, stat_lp, p, k, t, d):
     t0 = time.time()
-    # stability = calculate_stability(groups)
     ### Extracting the basic statistic from the co-location dataset
     aggregations = {
         'lat1':'count',                         ### Frequency
@@ -226,10 +204,8 @@ def aggregate_stats(groups, stat_lp, p, k, t, d):
         }
     }
     grouped = groups.agg(aggregations)
-    # grouped['stability'] = stability
     elapsed = time.time() - t0
     debug('Finished calculating all aggregations', 'p', p, 'k', k, 't', t, 'd', d, 'in %s seconds' % elapsed)
-    debug(grouped.describe())
 
     ### Fix the naming schemes of column names
     grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
@@ -258,7 +234,6 @@ def aggregate_stats(groups, stat_lp, p, k, t, d):
         "location1_diversity": "diversity", 
         "time1_duration":"duration",
         "location1_popularity": "popularity",
-        # "stability_":"stability",
         "time1_stability":"stability",
         "user1":"uid1", "user2":"uid2"
         }, inplace=True)
