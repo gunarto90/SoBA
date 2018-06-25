@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from joblib import Parallel, delayed
 import math
+import gc
 ### Custom libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer, init_begin_end
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
@@ -75,6 +76,7 @@ def run_colocation(config, run_by):
       if grouped is not None:
         grouped.drop(grouped.index, inplace=True)
         del grouped
+      gc.collect()
 
 def run_sci(config):
   ### Read standardized data and perform preprocessing
@@ -97,6 +99,7 @@ def run_sci(config):
       Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
       checkins.drop(checkins.index, inplace=True)
       del checkins
+      gc.collect()
 
 def run_sci_eval(config):
   kwargs = config['kwargs']
@@ -115,6 +118,7 @@ def run_sci_eval(config):
       for t_diff in t_diffs:
         for s_diff in s_diffs:
           sci_evaluation(config, p, k, t_diff, s_diff)
+          gc.collect()
 
 def run_combine(config):
   kwargs = config['kwargs']
