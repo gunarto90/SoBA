@@ -76,11 +76,7 @@ def sci_evaluation(config, p, k, t, d):
         texts = generate_report(config, X, y, assign, notes, p, k, t, d)
         del X, y
         report_directory = config['directory']['report']
-        make_sure_path_exists(report_directory)
         result_filename = '/'.join([report_directory, 'SCI_result_p{}_k{}.csv'.format(p,k)])
-        remove_file_if_exists(result_filename)
-        with open(result_filename, 'ab') as fw:
-            fw.write('p,k,t,d,auc,precision,recall,f1,#friends,#data,feature_set,preprocessing\n')
         for text in texts:
             if text is not None:
                 with open(result_filename, 'ab') as fw:

@@ -3,9 +3,12 @@ from joblib import Parallel, delayed
 import math
 import gc
 ### Custom libraries
-from common.functions import IS_DEBUG, read_config, debug, fn_timer, init_begin_end
-from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, extract_checkins_all
-from methods.colocation import process_map, process_reduce, prepare_colocation, generate_colocation_single
+from common.functions import IS_DEBUG, read_config, debug, fn_timer, \
+  init_begin_end, make_sure_path_exists, remove_file_if_exists
+from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, \
+  extract_checkins_all
+from methods.colocation import process_map, process_reduce, prepare_colocation, \
+  generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
 from methods.sci_eval import sci_evaluation
 from preprocessings.combine import combine_colocation
@@ -25,9 +28,11 @@ def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
   prepare_colocation(config, p, k, t_diff, s_diff, begins, ends)
   ### Start from bottom
   if order == 'ascending':
-    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i], ends[i], p, k, t_diff, s_diff) for i in range(len(begins)))
+    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i], ends[i], \
+      p, k, t_diff, s_diff) for i in range(len(begins)))
   else:
-    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i-1], ends[i-1], p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
+    Parallel(n_jobs=n_core)(delayed(process_map)(checkins, grouped, config, begins[i-1], ends[i-1], \
+      p, k, t_diff, s_diff) for i in xrange(len(begins), 0, -1))
   process_reduce(config, p, k, t_diff, s_diff)
   debug('Finished map-reduce for [p%d, k%d, t%d, d%.3f]' % (p, k, t_diff, s_diff))
 
@@ -96,7 +101,8 @@ def run_sci(config):
       ### Extracting checkins
       checkins, _ = extract_checkins(config, dataset_name, mode, 'user')
       stat_lp = extract_popularity(checkins, config, p, k)
-      Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
+      Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, \
+        p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
       checkins.drop(checkins.index, inplace=True)
       del checkins
       gc.collect()
@@ -110,11 +116,18 @@ def run_sci_eval(config):
   modes = kwargs['active_mode']
   t_diffs = kwargs['ts']
   s_diffs = kwargs['ds']
+  report_directory = config['directory']['report']
+  make_sure_path_exists(report_directory)
   for dataset_name in datasets:
     p = all_datasets.index(dataset_name)
     for mode in modes:
       k = all_modes.index(mode)
       debug('Run SCI Evaluation on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
+      ### Creating the report file
+      result_filename = '/'.join([report_directory, 'SCI_result_p{}_k{}.csv'.format(p,k)])
+      remove_file_if_exists(result_filename)
+      with open(result_filename, 'ab') as fw:
+          fw.write('p,k,t,d,auc,precision,recall,f1,#friends,#data,feature_set,preprocessing\n')
       for t_diff in t_diffs:
         for s_diff in s_diffs:
           sci_evaluation(config, p, k, t_diff, s_diff)
