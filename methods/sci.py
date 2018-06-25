@@ -7,6 +7,7 @@ import pickle
 import sys
 import os
 import warnings
+import time
 warnings.filterwarnings("ignore")   ### Disable warnings
 ### Setup Directories for local library
 PWD = os.getcwd()
@@ -143,12 +144,14 @@ def calculate_stability_simple(arr):
     diff = arr.diff()
     miu_xy = diff.sum(skipna=True)/len(arr)
     max_timediff = diff.max(skipna=True)
-    ### Average standard deviation of co-location time
+    # ### Average standard deviation of co-location time
     sigma_xy = calculate_sigma(arr.values, miu_xy)
-    ### Density of each co-location
+    # ### Density of each co-location
     rho_xy = math.sqrt(sigma_xy/len(arr))
-    ### Final weight of the stability feature
+    # ### Final weight of the stability feature
     w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
+    if np.isnan(w_s) or np.isinf(w_s):
+        w_s = 0.0
     return w_s
 
 """
@@ -199,6 +202,73 @@ def extract_popularity(checkins, config, p, k):
     ### Return the result
     return stat_lp
 
+def aggregate_stats(groups, stat_lp, p, k, t, d):
+    t0 = time.time()
+    # stability = calculate_stability(groups)
+    ### Extracting the basic statistic from the co-location dataset
+    aggregations = {
+        'lat1':'count',                         ### Frequency
+        'location1':{
+            'diversity':calculate_diversity,    ### Diversity
+            'popularity':lambda x: calculate_popularity(x, stat_lp)
+        },
+        'location2':{
+            'diversity':calculate_diversity,    ### Diversity
+            'popularity':lambda x: calculate_popularity(x, stat_lp)
+        },
+        'time1':{
+            'duration':calculate_duration,      ### Duration
+            'stability':calculate_stability_simple
+        },
+        'time2':{
+            'duration':calculate_duration,      ### Duration
+            'stability':calculate_stability_simple
+        }
+    }
+    grouped = groups.agg(aggregations)
+    # grouped['stability'] = stability
+    elapsed = time.time() - t0
+    debug('Finished calculating all aggregations', 'p', p, 'k', k, 't', t, 'd', d, 'in %s seconds' % elapsed)
+    debug(grouped.describe())
+
+    ### Fix the naming schemes of column names
+    grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
+    ### Applying Normalization
+    normalized = ['time1_duration', 'time2_duration', 
+        'location1_diversity', 'location2_diversity',
+        'location1_popularity', 'location2_popularity',
+        'time1_stability', 'time2_stability'
+    ]
+    for column in normalized:
+        grouped[column] = grouped[column]/max(grouped[column])
+    debug(grouped.describe())
+    ### Applying average
+    grouped['time1_duration'] = (grouped['time1_duration'] + grouped['time2_duration'])/2
+    grouped['time1_stability'] = (grouped['time1_stability'] + grouped['time2_stability'])/2
+    grouped['location1_diversity'] = (grouped['location1_diversity'] + grouped['location2_diversity'])/2
+    grouped['location1_popularity'] = (grouped['location1_popularity'] + grouped['location2_popularity'])/2
+    ### Removing unecessary columns
+    grouped.drop(['time2_duration'], axis=1, inplace=True)
+    grouped.drop(['time2_stability'], axis=1, inplace=True)
+    grouped.drop(['location2_diversity'], axis=1, inplace=True)
+    grouped.drop(['location2_popularity'], axis=1, inplace=True)
+    ### Renaming columns
+    grouped.reset_index(inplace=True)
+    grouped.rename(columns={"lat1_count": "frequency", 
+        "location1_diversity": "diversity", 
+        "time1_duration":"duration",
+        "location1_popularity": "popularity",
+        # "stability_":"stability",
+        "time1_stability":"stability",
+        "user1":"uid1", "user2":"uid2"
+        }, inplace=True)
+    ### Reordering the columns
+    grouped = grouped[['uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link']]
+    debug(grouped.columns.values)
+    ### Removing all co-location less than two co-occurrences
+    grouped = grouped[(grouped['frequency'] > 1)]
+
+    return grouped
 """
 Extract all the co-location's features
 inputs:
@@ -219,60 +289,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     debug('#colocations', len(colocation_df), 'p', p, 'k', k, 't', t, 'd', d)
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
-    stability = calculate_stability(groups)
-    ### Extracting the basic statistic from the co-location dataset
-    aggregations = {
-        'lat1':'count',                         ### Frequency
-        'location1':{
-            'diversity':calculate_diversity,    ### Diversity
-            'popularity':lambda x: calculate_popularity(x, stat_lp)
-        },
-        'location2':{
-            'diversity':calculate_diversity,    ### Diversity
-            'popularity':lambda x: calculate_popularity(x, stat_lp)
-        },
-        'time1':{
-            'duration':calculate_duration       ### Duration
-        },
-        'time2':{
-            'duration':calculate_duration       ### Duration
-        }
-    }
-    grouped = groups.agg(aggregations)
-    debug('Finished calculating all aggregations', 'p', p, 'k', k, 't', t, 'd', d)
-    grouped['stability'] = stability
-    ### Fix the naming schemes of column names
-    grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
-    ### Applying Normalization
-    normalized = ['time1_duration', 'time2_duration', 
-        'location1_diversity', 'location2_diversity',
-        'location1_popularity', 'location2_popularity',
-        "stability_"
-    ]
-    for column in normalized:
-        grouped[column] = grouped[column]/max(grouped[column])
-    ### Applying average
-    grouped['time1_duration'] = (grouped['time1_duration'] + grouped['time2_duration'])/2
-    grouped['location1_diversity'] = (grouped['location1_diversity'] + grouped['location2_diversity'])/2
-    grouped['location1_popularity'] = (grouped['location1_popularity'] + grouped['location2_popularity'])/2
-    ### Removing unecessary columns
-    grouped.drop(['time2_duration'], axis=1, inplace=True)
-    grouped.drop(['location2_diversity'], axis=1, inplace=True)
-    grouped.drop(['location2_popularity'], axis=1, inplace=True)
-    ### Renaming columns
-    grouped.reset_index(inplace=True)
-    grouped.rename(columns={"lat1_count": "frequency", 
-        "location1_diversity": "diversity", 
-        "time1_duration":"duration",
-        "location1_popularity": "popularity",
-        "stability_":"stability",
-        "user1":"uid1", "user2":"uid2"
-        }, inplace=True)
-    ### Reordering the columns
-    grouped = grouped[['uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link']]
-    debug(grouped.columns.values)
-    ### Removing all co-location less than two co-occurrences
-    grouped = grouped[(grouped['frequency'] > 1)]
+    grouped = aggregate_stats(groups, stat_lp, p, k, t, d)
     ### Write the result into a csv output
     write_statistics(grouped, config, p, k, t, d)
 
