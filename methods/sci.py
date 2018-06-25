@@ -199,6 +199,10 @@ def extract_popularity(checkins, config, p, k):
     ### Return the result
     return stat_lp
 
+@fn_timer
+def aggregate_stats(groups, p, k, t, d):
+    pass
+
 """
 Extract all the co-location's features
 inputs:
