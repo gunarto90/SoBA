@@ -24,7 +24,7 @@ def extract_visit_per_venue(checkins, config):
     p_l  = []               ### #Visit of user U to each location
     uids = checkins['user'].unique()
     for uid in uids:
-        df = df_uid(checkins, uid, config)
+        df = df_uid(checkins, uid, config, force_id="user")
         temp = df.groupby('location')['location'].size().reset_index(name='counts')
         for row in temp.itertuples():
             current_count = visit_per_venue.get(row.location)
@@ -131,13 +131,25 @@ def calculate_stability(groups):
             miu_xy = (df['diff'].sum(skipna=True)/len(df))
             max_timediff = df['diff'].max(skipna=True)
             ### Average standard deviation of co-location time
-            sigma_xy = calculate_sigma(df['time_avg'].values, miu_xy)            
+            sigma_xy = calculate_sigma(df['time_avg'].values, miu_xy)
             ### Density of each co-location
             rho_xy = math.sqrt(sigma_xy/len(df))
             ### Final weight of the stability feature
             w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
             results.append(w_s)
     return np.array(results)
+
+def calculate_stability_simple(arr):
+    diff = arr.diff()
+    miu_xy = diff.sum(skipna=True)/len(arr)
+    max_timediff = diff.max(skipna=True)
+    ### Average standard deviation of co-location time
+    sigma_xy = calculate_sigma(arr.values, miu_xy)
+    ### Density of each co-location
+    rho_xy = math.sqrt(sigma_xy/len(arr))
+    ### Final weight of the stability feature
+    w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
+    return w_s
 
 """
 Public functions
@@ -204,7 +216,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     colocation_df = read_colocation_file(config, p, k, t, d)
     ### Find if the two users in the colocated check-ins are friends / stranger
     colocation_df = determine_social_tie(colocation_df, friend_df)
-    debug('#colocations', len(colocation_df))
+    debug('#colocations', len(colocation_df), 'p', p, 'k', k, 't', t, 'd', d)
     ### Find the stability value for each co-location pairs
     groups = colocation_df.groupby(['user1', 'user2', 'link'])
     stability = calculate_stability(groups)
@@ -227,7 +239,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
         }
     }
     grouped = groups.agg(aggregations)
-    debug('Finished calculating all aggregations')
+    debug('Finished calculating all aggregations', 'p', p, 'k', k, 't', t, 'd', d)
     grouped['stability'] = stability
     ### Fix the naming schemes of column names
     grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
@@ -268,3 +280,5 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     del friend_df
     del colocation_df
     del grouped
+
+    debug('Finished extract_colocation_features', 'p', p, 'k', k, 't', t, 'd', d)

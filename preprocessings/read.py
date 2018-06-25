@@ -216,8 +216,11 @@ def extract_friendships(dataset_name, config):
 """
 Retrieving the check-ins of user 'uid'
 """
-def df_uid(df, uid, config):
-  id = config['kwargs']['colocation']['run_by']
+def df_uid(df, uid, config, force_id=None):
+  if force_id is None:
+    id = config['kwargs']['colocation']['run_by']
+  else:
+    id = force_id
   return df.loc[df[id] == uid]
 
 @fn_timer
