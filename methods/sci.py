@@ -255,22 +255,34 @@ inputs:
 """
 def extract_colocation_features(stat_lp, config, p, k, t, d):
     debug('p', p, 'k', k, 't', t, 'd', d)
+    ### Check if SCI intermediate exists
     dataset_names = config['dataset']
-    ### Read (original) friendship from file
-    friend_df = extract_friendships(dataset_names[p], config)
-    colocation_df = read_colocation_file(config, p, k, t, d)
-    ### Find if the two users in the colocated check-ins are friends / stranger
-    colocation_df = determine_social_tie(colocation_df, friend_df)
-    debug('#colocations', len(colocation_df), 'p', p, 'k', k, 't', t, 'd', d)
-    ### Find the stability value for each co-location pairs
-    groups = colocation_df.groupby(['user1', 'user2', 'link'])
-    grouped = aggregate_stats(groups, stat_lp, p, k, t, d)
-    ### Write the result into a csv output
-    write_statistics(grouped, config, p, k, t, d)
+    compressed = config['kwargs']['sci']['compress_output']
+    sci_root = config['directory']['sci']
+    make_sure_path_exists('/'.join([sci_root, dataset_names[p]]))
+    if compressed is True:
+        sci_name = config['intermediate']['sci']['evaluation_compressed']
+    else:
+        sci_name = config['intermediate']['sci']['evaluation']
+    sci_name = '/'.join([sci_root, dataset_names[p], sci_name.format(p, k, t, d)])
+    if is_file_exists(sci_name):
+        debug('File %s exists' % sci_name)
+    else:
+        dataset_names = config['dataset']
+        ### Read (original) friendship from file
+        friend_df = extract_friendships(dataset_names[p], config)
+        colocation_df = read_colocation_file(config, p, k, t, d)
+        ### Find if the two users in the colocated check-ins are friends / stranger
+        colocation_df = determine_social_tie(colocation_df, friend_df)
+        debug('#colocations', len(colocation_df), 'p', p, 'k', k, 't', t, 'd', d)
+        ### Find the stability value for each co-location pairs
+        groups = colocation_df.groupby(['user1', 'user2', 'link'])
+        grouped = aggregate_stats(groups, stat_lp, p, k, t, d)
+        ### Write the result into a csv output
+        write_statistics(grouped, config, p, k, t, d)
 
-    ### Memory management
-    del friend_df
-    del colocation_df
-    del grouped
-
+        ### Memory management
+        del friend_df
+        del colocation_df
+        del grouped
     debug('Finished extract_colocation_features', 'p', p, 'k', k, 't', t, 'd', d)

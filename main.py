@@ -102,7 +102,7 @@ def run_sci(config):
       checkins, _ = extract_checkins(config, dataset_name, mode, 'user')
       stat_lp = extract_popularity(checkins, config, p, k)
       Parallel(n_jobs=n_core)(delayed(extract_colocation_features)(stat_lp, config, \
-        p, k, t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs)
+        p, k, t_diff, s_diff) for t_diff in t_diffs for s_diff in s_diffs)
       checkins.drop(checkins.index, inplace=True)
       del checkins
       gc.collect()
