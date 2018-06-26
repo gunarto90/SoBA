@@ -9,3 +9,4 @@ visual/*
 intermediate/*
 .DS_Store
 *.ipynb
+reports/*
