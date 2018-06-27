@@ -134,10 +134,16 @@ def calculate_stability_simple(arr):
     return w_s
 
 def calculate_stability_avg(arr):
-    return arr.diff().mean(skipna=True)
+    w_s = arr.diff().mean(skipna=True)
+    if np.isnan(w_s) or np.isinf(w_s):
+        w_s = 0.0
+    return w_s 
 
 def calculate_stability_stdev(arr):
-    return arr.diff().std(skipna=True)
+    w_s = arr.diff().std(skipna=True)
+    if np.isnan(w_s) or np.isinf(w_s):
+        w_s = 0.0
+    return w_s  
 
 """
 Public functions
