@@ -133,6 +133,12 @@ def calculate_stability_simple(arr):
         w_s = 0.0
     return w_s
 
+def calculate_stability_avg(arr):
+    return arr.diff().mean(skipna=True)
+
+def calculate_stability_stdev(arr):
+    return arr.diff().std(skipna=True)
+
 """
 Public functions
 """
@@ -196,11 +202,13 @@ def aggregate_stats(groups, stat_lp, p, k, t, d):
         },
         'time1':{
             'duration':calculate_duration,      ### Duration
-            'stability':calculate_stability_simple
+            'stability_avg':calculate_stability_avg,
+            'stability_std':calculate_stability_stdev
         },
         'time2':{
             'duration':calculate_duration,      ### Duration
-            'stability':calculate_stability_simple
+            'stability_avg':calculate_stability_avg,
+            'stability_std':calculate_stability_stdev
         }
     }
     grouped = groups.agg(aggregations)
@@ -213,19 +221,22 @@ def aggregate_stats(groups, stat_lp, p, k, t, d):
     normalized = ['time1_duration', 'time2_duration', 
         'location1_diversity', 'location2_diversity',
         'location1_popularity', 'location2_popularity',
-        'time1_stability', 'time2_stability'
+        'time1_stability_avg', 'time2_stability_avg',
+        'time1_stability_std', 'time2_stability_std'
     ]
     for column in normalized:
         grouped[column] = grouped[column]/max(grouped[column])
     debug(grouped.describe())
     ### Applying average
     grouped['time1_duration'] = (grouped['time1_duration'] + grouped['time2_duration'])/2
-    grouped['time1_stability'] = (grouped['time1_stability'] + grouped['time2_stability'])/2
+    grouped['time1_stability_avg'] = (grouped['time1_stability_avg'] + grouped['time2_stability_avg'])/2
+    grouped['time1_stability_std'] = (grouped['time1_stability_std'] + grouped['time2_stability_std'])/2
     grouped['location1_diversity'] = (grouped['location1_diversity'] + grouped['location2_diversity'])/2
     grouped['location1_popularity'] = (grouped['location1_popularity'] + grouped['location2_popularity'])/2
     ### Removing unecessary columns
     grouped.drop(['time2_duration'], axis=1, inplace=True)
-    grouped.drop(['time2_stability'], axis=1, inplace=True)
+    grouped.drop(['time2_stability_avg'], axis=1, inplace=True)
+    grouped.drop(['time2_stability_std'], axis=1, inplace=True)
     grouped.drop(['location2_diversity'], axis=1, inplace=True)
     grouped.drop(['location2_popularity'], axis=1, inplace=True)
     ### Renaming columns
@@ -234,11 +245,12 @@ def aggregate_stats(groups, stat_lp, p, k, t, d):
         "location1_diversity": "diversity", 
         "time1_duration":"duration",
         "location1_popularity": "popularity",
-        "time1_stability":"stability",
+        "time1_stability_std":"stability",
+        "time1_stability_avg":"stability_avg",
         "user1":"uid1", "user2":"uid2"
         }, inplace=True)
     ### Reordering the columns
-    grouped = grouped[['uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link']]
+    grouped = grouped[['uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'stability_avg', 'link']]
     debug(grouped.columns.values)
     ### Removing all co-location less than two co-occurrences
     grouped = grouped[(grouped['frequency'] > 1)]

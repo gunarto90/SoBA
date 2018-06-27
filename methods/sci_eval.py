@@ -35,7 +35,7 @@ def sci_evaluation(config, p, k, t, d):
     if is_file_exists(evaluation_name) is True:
         dataset = pd.read_csv(evaluation_name)
         # Format: 'uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link'
-        X = dataset[['frequency', 'diversity', 'duration', 'stability', 'popularity']].values
+        X = dataset[['frequency', 'diversity', 'duration', 'stability', 'popularity', 'stability_avg']].values
         y = dataset[['link']].values
         ### Selecting the feature set
         selected_feature_set = config['kwargs']['sci_eval']['features']
@@ -67,6 +67,9 @@ def sci_evaluation(config, p, k, t, d):
         elif selected_feature_set == 'summary':
             notes = ['SCI+']
             assign = [ [0,1,2,3,4] ]
+        elif selected_feature_set == 'sci++':
+            notes = ['SCI++']
+            assign = [ [0,1,2,3,4,5] ]
         ### SCI and SCI+
         else:   ### 'summary_old_new'
             notes = ['SCI+', 'SCI']
