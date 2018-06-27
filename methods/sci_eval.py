@@ -35,7 +35,7 @@ def sci_evaluation(config, p, k, t, d):
     if is_file_exists(evaluation_name) is True:
         dataset = pd.read_csv(evaluation_name)
         # Format: 'uid1', 'uid2', 'frequency', 'diversity', 'duration', 'stability', 'popularity', 'link'
-        X = dataset[['frequency', 'diversity', 'duration', 'stability', 'popularity', 'stability_avg']].values
+        X = dataset[['frequency', 'diversity', 'duration', 'stability_std', 'popularity', 'stability_avg', 'stability_old']].values
         y = dataset[['link']].values
         ### Selecting the feature set
         selected_feature_set = config['kwargs']['sci_eval']['features']
@@ -67,6 +67,29 @@ def sci_evaluation(config, p, k, t, d):
         elif selected_feature_set == 'summary':
             notes = ['SCI+']
             assign = [ [0,1,2,3,4] ]
+        elif selected_feature_set == 'sci_plus_all':
+            notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability_stdev', 'Popularity', 'Stability_average', 'Stability_old',
+                'F+D', 'F+TD', 'F+TSD', 'F+P', 'D+TD', 'D+TSD', 'D+P', 'TD+TSD', 'TD+P', 'TSD+P', 
+                'F+D+TD', 'F+D+TSD', 'F+D+P', 'F+TD+TSD', 'F+TD+P', 
+                'F+TSD+P', 'D+TD+TSD', 'D+TD+P', 'D+TSD+P', 'TD+TSD+P', 
+                'F+D+TD+TSD', 'F+D+TD+P', 'F+D+TSD+P', 'F+TD+TSD+P', 'D+TD+TSD+P', 'SCI',
+                'F+TSA',  'D+TSA', 'TD+TSA', 'TSD+TSA', 'P+TSA',
+                'F+D+TSA', 'F+TD+TSA', 'F+TSD+TSA', 'F+P+TSA', 'D+TD+TSA', 'D+TSD+TSA', 'D+P+TSA', 'TD+TSD+TSA', 'TD+P+TSA', 'TSD+P+TSA',
+                'F+D+TD+TSA', 'F+D+TSD+TSA', 'F+D+P+TSA', 'F+TD+TSD+TSA', 'F+TD+P+TSA', 'F+TSD+P+TSA',
+                'D+TD+TSD+TSA', 'D+TD+P+TSA', 'D+TSD+P+TSA',
+                'F+D+TD+TSD+P', 'F+D+TD+TSD+TSA', 'F+D+TD+P+TSA', 'F+D+TSD+P+TSA', 'F+TD+TSD+P+TSA', 'D+TD+TSD+P+TSA'
+            ]
+            assign = [ [0,1,2,4,6], [0], [1], [2], [3], [4], [5], [6],
+                [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], 
+                [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], 
+                [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], 
+                [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4], [0,1,2,6], 
+                [0, 5], [1, 5], [2, 5], [3, 5], [4, 5],
+                [0, 1, 5], [0, 2, 5], [0, 3, 5], [0, 4, 5], [1, 2, 5], [1, 3, 5], [1, 4, 5], [2, 3, 5], [2, 4, 5], [3, 4, 5],
+                [0, 1, 2, 5], [0, 1, 3, 5], [0, 1, 4, 5], [0, 2, 3, 5],  [0, 2, 4, 5], [0, 3, 4, 5], 
+                [1, 2, 3, 5], [1, 2, 4, 5], [2, 3, 4, 5],
+                [0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [0, 1, 2, 4, 5], [0, 1, 3, 4, 5], [0, 2, 3, 4, 5], [1, 2, 3, 4, 5]
+            ]
         elif selected_feature_set == 'sci++':
             notes = ['SCI++']
             assign = [ [0,1,2,3,4,5] ]
