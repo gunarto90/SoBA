@@ -226,7 +226,7 @@ def df_uid(df, uid, config, force_id=None):
   return df.loc[df[id] == uid]
 
 @fn_timer
-def read_colocation_file(config, p, k, t, d):
+def read_colocation_file(config, p, k, t, d, chunksize=None):
     ### Read co-location from file
     is_read_compressed = config['kwargs']['sci']['read_compressed']
     colocation_root = config['directory']['colocation']
@@ -242,8 +242,15 @@ def read_colocation_file(config, p, k, t, d):
         'lat1':np.float_,'lon1':np.float_,'lat2':np.float_,'lon2':np.float_,
         't_diff':np.int_,'s_diff':np.float_
     }
-    colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
+    if chunksize is None:
+      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
+    else:
+      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, chunksize=chunksize)
     return colocation_df
+
+def read_colocation_chunk(config, p, k, t, d):
+  chunksize = 10 ** 6
+  return read_colocation_file(config, p, k, t, d, chunksize)
 
 def determine_social_tie(colocation_df, friend_df):
     colocation_df = pd.merge(colocation_df, friend_df, on=['user1','user2'], how='left', indicator='link')
@@ -251,27 +258,52 @@ def determine_social_tie(colocation_df, friend_df):
     return colocation_df
 
 def generate_user_visit(config):
-  for p in [2]:
-    for k in [2]:
-      colocations = read_colocation_file(config, p, k, 7200, 0.01)
-      debug(colocations.describe())
-      user_visits = []
-      user_visits.append(colocations[['user1', 'location1']].drop_duplicates())
-      user_visits.append(colocations[['user2', 'location1']].drop_duplicates())
-      user_visits.append(colocations[['user1', 'location2']].drop_duplicates())
-      user_visits.append(colocations[['user2', 'location2']].drop_duplicates())
-      user_visits[0].rename(columns={'user1':'user', 'location1':'location'}, inplace=True)
-      user_visits[1].rename(columns={'user2':'user', 'location1':'location'}, inplace=True)
-      user_visits[2].rename(columns={'user1':'user', 'location2':'location'}, inplace=True)
-      user_visits[3].rename(columns={'user2':'user', 'location2':'location'}, inplace=True)
-      df = user_visits[0]
-      for i in range(1, len(user_visits)):
-        df = pd.merge(df, user_visits[i], how='inner', on='user')
-      out_dir = '/'.join(config['directory']['intermediate'], [config['dataset'][p]])
+  kwargs = config['kwargs']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  t = max(t_diffs)  ### Read the largest possible co-locations
+  d = max(s_diffs)  ### Read the largest possible co-locations
+  for dataset_name in datasets:
+    p = config['dataset'].index(dataset_name)
+    for mode in modes:
+      k = config['mode'].index(mode)
+      out_dir = '/'.join([config['directory']['intermediate'], config['dataset'][p]])
       out_name = config['intermediate']['pgt']['user_visit'].format(config['mode'][k])
-      df.to_csv('/'.join([out_dir, out_name]), compression='bz2', header=True, index=False)
-      del colocations, df
-      gc.collect()
+      final_name = '/'.join([out_dir, out_name])
+      if is_file_exists(final_name):
+        debug('File %s already exists' % final_name)
+      else:
+        df = None
+        i = 1
+        debug('Extracting user visits in colocations', dataset_name, p, mode, k)
+        for colocations in read_colocation_chunk(config, p, k, t, d):
+          user_visits = []
+          user_visits.append(colocations[['user1', 'location1']].drop_duplicates())
+          user_visits.append(colocations[['user2', 'location1']].drop_duplicates())
+          user_visits.append(colocations[['user1', 'location2']].drop_duplicates())
+          user_visits.append(colocations[['user2', 'location2']].drop_duplicates())
+          user_visits[0].rename(columns={'user1':'user', 'location1':'location'}, inplace=True)
+          user_visits[1].rename(columns={'user2':'user', 'location1':'location'}, inplace=True)
+          user_visits[2].rename(columns={'user1':'user', 'location2':'location'}, inplace=True)
+          user_visits[3].rename(columns={'user2':'user', 'location2':'location'}, inplace=True)
+          del colocations
+          gc.collect()
+          temp = pd.concat(user_visits).drop_duplicates()
+          if df is None:
+            df = temp
+          else:
+            df.append(temp).drop_duplicates()
+          debug('Processing chunks', '..'*i)
+          i += 1
+        debug('Writing result to file', out_dir, out_name)
+        df.sort_values(['user', 'location'], inplace=True)
+        df.to_csv(final_name, compression='bz2', header=True, index=False)
+        if df is not None:
+          del df
+        del user_visits
+        gc.collect()
 
 @fn_timer
 def main():
