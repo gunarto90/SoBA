@@ -14,7 +14,7 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer, entropy, make_sure_path_exists, is_file_exists
-from preprocessings.read import extract_friendships, df_uid
+from preprocessings.read import extract_friendships, df_uid, read_colocation_file, determine_social_tie
 
 """
 Private functions
@@ -46,31 +46,6 @@ def extract_aggregated_visit(visit_per_venue, p_l):
             if arr.get(vid) is not None:
                 p_ul[vid].append(float(arr[vid]['counts'])/frequency)
     return p_ul
-
-@fn_timer
-def read_colocation_file(config, p, k, t, d):
-    ### Read co-location from file
-    is_read_compressed = config['kwargs']['sci']['read_compressed']
-    colocation_root = config['directory']['colocation']
-    if is_read_compressed is False:
-        colocation_name = config['intermediate']['colocation']['csv']
-    else:
-        colocation_name = config['intermediate']['colocation']['compressed']
-    colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
-    colocation_dtypes = {
-        'user1':np.int_,'user2':np.int_,
-        'location1':np.int_,'location2':np.int_,
-        'time1':np.int_,'time2':np.int_,
-        'lat1':np.float_,'lon1':np.float_,'lat2':np.float_,'lon2':np.float_,
-        't_diff':np.int_,'s_diff':np.float_
-    }
-    colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
-    return colocation_df
-
-def determine_social_tie(colocation_df, friend_df):
-    colocation_df = pd.merge(colocation_df, friend_df, on=['user1','user2'], how='left', indicator='link')
-    colocation_df['link'] = np.where(colocation_df.link == 'both', 1, 0)
-    return colocation_df
 
 @fn_timer
 def write_statistics(df, config, p, k, t, d):

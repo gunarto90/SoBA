@@ -231,3 +231,13 @@ def init_begin_end(n_core, size, start=0, finish=-1):
     end = end[idx_start:idx_finish]
   assert len(begin) == len(end) ### Make sure the length of begin == length of end
   return begin, end
+
+def merge_dicts(*dict_args):
+    """
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    """
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result

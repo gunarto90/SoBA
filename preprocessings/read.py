@@ -9,6 +9,7 @@ import pandas as pd
 import pickle
 import sys
 import os.path
+import gc
 ### Setup Directories for local library
 PWD = os.getcwd()
 sys.path.append(PWD)
@@ -138,7 +139,8 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
     }
     grouped = grouped.round(round)
     grouped.sort_values(by=['lon_min', 'lat_min'], inplace=True)
-    grouped = grouped[[id, 't_avg', 'lat_avg', 'lon_avg', 't_min', 't_max', 'lat_min', 'lat_max', 'lon_min', 'lon_max']]
+    grouped = grouped[[id, 't_avg', 'lat_avg', 'lon_avg', 't_min', 't_max', 
+      'lat_min', 'lat_max', 'lon_min', 'lon_max']]
   return df, grouped
 
 def preprocess_data(root):
@@ -224,15 +226,67 @@ def df_uid(df, uid, config, force_id=None):
   return df.loc[df[id] == uid]
 
 @fn_timer
+def read_colocation_file(config, p, k, t, d):
+    ### Read co-location from file
+    is_read_compressed = config['kwargs']['sci']['read_compressed']
+    colocation_root = config['directory']['colocation']
+    if is_read_compressed is False:
+        colocation_name = config['intermediate']['colocation']['csv']
+    else:
+        colocation_name = config['intermediate']['colocation']['compressed']
+    colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
+    colocation_dtypes = {
+        'user1':np.int_,'user2':np.int_,
+        'location1':np.int_,'location2':np.int_,
+        'time1':np.int_,'time2':np.int_,
+        'lat1':np.float_,'lon1':np.float_,'lat2':np.float_,'lon2':np.float_,
+        't_diff':np.int_,'s_diff':np.float_
+    }
+    colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
+    return colocation_df
+
+def determine_social_tie(colocation_df, friend_df):
+    colocation_df = pd.merge(colocation_df, friend_df, on=['user1','user2'], how='left', indicator='link')
+    colocation_df['link'] = np.where(colocation_df.link == 'both', 1, 0)
+    return colocation_df
+
+def generate_user_visit(config):
+  for p in [2]:
+    for k in [2]:
+      colocations = read_colocation_file(config, p, k, 7200, 0.01)
+      debug(colocations.describe())
+      user_visits = []
+      user_visits.append(colocations[['user1', 'location1']].drop_duplicates())
+      user_visits.append(colocations[['user2', 'location1']].drop_duplicates())
+      user_visits.append(colocations[['user1', 'location2']].drop_duplicates())
+      user_visits.append(colocations[['user2', 'location2']].drop_duplicates())
+      user_visits[0].rename(columns={'user1':'user', 'location1':'location'}, inplace=True)
+      user_visits[1].rename(columns={'user2':'user', 'location1':'location'}, inplace=True)
+      user_visits[2].rename(columns={'user1':'user', 'location2':'location'}, inplace=True)
+      user_visits[3].rename(columns={'user2':'user', 'location2':'location'}, inplace=True)
+      df = user_visits[0]
+      for i in range(1, len(user_visits)):
+        df = pd.merge(df, user_visits[i], how='inner', on='user')
+      out_dir = '/'.join(config['directory']['intermediate'], [config['dataset'][p]])
+      out_name = config['intermediate']['pgt']['user_visit'].format(config['mode'][k])
+      df.to_csv('/'.join([out_dir, out_name]), compression='bz2', header=True, index=False)
+      del colocations, df
+      gc.collect()
+
+@fn_timer
 def main():
   ### Read config
   config = read_config()
   kwargs = config['kwargs']
 
   ### Read original data and generate standardized data
-  if kwargs['preprocessing']['read_original'] is True:
-    dataset_root = config['directory']['dataset']
-    preprocess_data(dataset_root)
+  if kwargs['preprocessing']['run'] is True:
+    if kwargs['preprocessing']['read_original'] is True:
+      dataset_root = config['directory']['dataset']
+      preprocess_data(dataset_root)
+  ### Extract user visit from co-location
+  if kwargs['preprocessing']['user_visit'] is True:
+    generate_user_visit(config)
 
 if __name__ == '__main__':
   main()

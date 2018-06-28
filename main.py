@@ -11,6 +11,7 @@ from methods.colocation import process_map, process_reduce, prepare_colocation, 
   generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
 from methods.sci_eval import sci_evaluation
+from methods.pgt import extract_personal_pgt
 from preprocessings.combine import combine_colocation
 
 @fn_timer
@@ -133,6 +134,26 @@ def run_sci_eval(config):
           sci_evaluation(config, p, k, t_diff, s_diff)
           gc.collect()
 
+def run_pgt(config):
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  all_datasets = config['dataset']
+  all_modes = config['mode']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  # t_diffs = kwargs['ts']
+  # s_diffs = kwargs['ds']
+  for dataset_name in datasets:
+    p = all_datasets.index(dataset_name)
+    for mode in modes:
+      k = all_modes.index(mode)
+      debug('Run PGT Extraction on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
+      extract_personal_pgt(config, p, k)
+      # for t_diff in t_diffs:
+      #   for s_diff in s_diffs:
+      #     pass
+      #     gc.collect()
+
 def run_combine(config):
   kwargs = config['kwargs']
   n_core = kwargs['n_core']
@@ -167,6 +188,10 @@ def main():
   is_run = kwargs['sci_eval']['run']
   if is_run is not None and is_run is True:
     run_sci_eval(config)
+  ### PGT
+  is_run = kwargs['pgt']['run']
+  if is_run is not None and is_run is True:
+    run_pgt(config)
   ### Finished the program
   debug('Finished SCI+')
 

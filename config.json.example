@@ -27,12 +27,17 @@
       "sampling":["original"],
       "kfold":5,
       "features_options":[
-        "pakdd_2017_all", "pakdd_2017_summary", "all_features", "summary", "summary_old_new"
+        "pakdd_2017_all", "pakdd_2017_summary", "all_features", "summary", "summary_old_new", "sci_plus_all", "sci++"
       ],
       "sampling_options":["original", "over", "under", "combo"]
     },
-    "pgt":false,
-    "pgt_features":0,
+    "pgt":{
+      "run":false,
+      "read_compressed":true,
+      "compress_output":false,
+      "start":0,
+      "finish":-1
+    },
     "pgt_eval":false,
     "partial_colocation":{
       "p":[2],
@@ -48,9 +53,11 @@
       "compress_output":false
     },
     "preprocessing":{
+      "run":"false",
       "read_original":false,
       "extract_friendships":false,
-      "ids": ["user", "location", "checkin"]
+      "ids": ["user", "location", "checkin"],
+      "user_visit":false
     }
   },
 
@@ -75,6 +82,7 @@
     "visual":"visual",
     "colocation":"intermediate/colocation",
     "sci":"intermediate/sci",
+    "pgt":"intermediate/pgt",
     "report":"reports"
   },
   "intermediate": {
@@ -89,6 +97,14 @@
       "popularity":"sci_popularity_{}.pickle",
       "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
       "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
+    },
+    "pgt":{
+      "personal":"pgt_personal_{}.csv",
+      "personal_part":"pgt_personal_{}_s{}_f{}.csv",
+      "global":"pgt_global_{}.pickle",
+      "pgt_output":"pgt_evaluation_p{}_k{}_t{}_d{}.csv",
+      "pgt_output_compressed":"pgt_evaluation_p{}_k{}_t{}_d{}.csv.bz2",
+      "user_visit":"user_visit_{}.csv.bz2"
     }
   },
 

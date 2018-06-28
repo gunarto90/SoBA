@@ -44,13 +44,13 @@ def sci_evaluation(config, p, k, t, d):
             notes = ["SCI", "frequency", "diversity", "duration", "stability", 
                 "F+D", "F+TD", "F+TS", "D+TD", "D+TS", "TD+TS", 
                 "F+D+TD", "F+D+TS", "F+TD+TS", "D+TD+TS"]
-            assign = [[0,1,2,3], [0], [1], [2], [3], 
-                [0,1], [0,2],[ 0,3], [1,2], [1,3], [2,3], 
-                [0,1,2], [0,1,3], [0,2,3], [1,2,3]]
+            assign = [[0,1,2,6], [0], [1], [2], [6], 
+                [0,1], [0,2],[ 0,6], [1,2], [1,6], [2,6], 
+                [0,1,2], [0,1,6], [0,2,6], [1,2,6]]
         ### PAKDD 2017 Submission (All)
         elif selected_feature_set == 'pakdd_2017_summary':
             notes = ['SCI']
-            assign = [ [0,1,2,3] ]
+            assign = [ [0,1,2,6] ]
         ## New Feature added (Popularity)
         elif selected_feature_set == 'all_features':
             notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability', 'Popularity', 
@@ -66,7 +66,7 @@ def sci_evaluation(config, p, k, t, d):
         ### Only All features
         elif selected_feature_set == 'summary':
             notes = ['SCI+']
-            assign = [ [0,1,2,3,4] ]
+            assign = [ [0,1,2,4,6] ]
         elif selected_feature_set == 'sci_plus_all':
             notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability_stdev', 'Popularity', 'Stability_average', 'Stability_old',
                 'F+D', 'F+TD', 'F+TSD', 'F+P', 'D+TD', 'D+TSD', 'D+P', 'TD+TSD', 'TD+P', 'TSD+P', 
@@ -96,7 +96,7 @@ def sci_evaluation(config, p, k, t, d):
         ### SCI and SCI+
         else:   ### 'summary_old_new'
             notes = ['SCI+', 'SCI']
-            assign = [ [0,1,2,3,4], [0,1,2,3] ]
+            assign = [ [0,1,2,4,6], [0,1,2,6] ]
         ### Generate the report
         debug(notes, assign)
         texts = generate_report(config, X, y, assign, notes, p, k, t, d)
