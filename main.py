@@ -12,7 +12,6 @@ from methods.colocation import process_map, process_reduce, prepare_colocation, 
 from methods.sci import extract_popularity, extract_colocation_features
 from methods.sci_eval import sci_evaluation
 from methods.pgt import extract_personal_pgt
-from preprocessings.combine import combine_colocation
 
 @fn_timer
 def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
@@ -154,16 +153,6 @@ def run_pgt(config):
       #     pass
       #     gc.collect()
 
-def run_combine(config):
-  kwargs = config['kwargs']
-  n_core = kwargs['n_core']
-  all_datasets = config['dataset']
-  datasets = kwargs['active_dataset']
-  t_diffs = kwargs['ts']
-  s_diffs = kwargs['ds']
-  debug('Combining co-location datasets (weekday and weekend)', '#Core', n_core)
-  Parallel(n_jobs=n_core)(delayed(combine_colocation)(config, all_datasets.index(dataset_name), t_diff, s_diff) for s_diff in s_diffs for t_diff in t_diffs for dataset_name in datasets)
-
 def main():
   ### Started the program
   debug('Started SCI+')
@@ -176,10 +165,6 @@ def main():
   if is_run is not None and is_run is True:
     ### Co-location generation
     run_colocation(config, run_by)
-  ### Combine co-location
-  is_run = kwargs['combine']['run']
-  if is_run is not None and is_run is True:
-    run_combine(config)
   ### SCI
   is_run = kwargs['sci']['run']
   if is_run is not None and is_run is True:
