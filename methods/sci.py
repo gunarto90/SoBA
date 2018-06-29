@@ -97,14 +97,14 @@ def calculate_sigma(arr, miu):
 def calculate_stability_simple(arr):
     df = arr.diff().fillna(0)
     diff = df[df!=0]
-    miu_xy = diff.sum(skipna=True)/len(arr)
     max_timediff = diff.max(skipna=True)
+    miu_xy = diff.mean(skipna=True)/max_timediff
     # ### Average standard deviation of co-location time
     sigma_xy = calculate_sigma(arr.values, miu_xy)
     # ### Density of each co-location
     rho_xy = math.sqrt(sigma_xy/len(arr))
     # ### Final weight of the stability feature
-    w_s = math.exp(-(miu_xy+rho_xy)/max_timediff)
+    w_s = math.exp(-(miu_xy+rho_xy))
     if np.isnan(w_s) or np.isinf(w_s):
         w_s = 0.0
     return w_s
@@ -112,10 +112,12 @@ def calculate_stability_simple(arr):
 def calculate_stability_avg(arr):
     df = arr.diff().fillna(0)
     diff = df[df!=0]
+    max_timediff = diff.max(skipna=True)
+    diff = diff / max_timediff
     w_s = diff.mean(skipna=True)
     if np.isnan(w_s) or np.isinf(w_s):
         w_s = 0.0
-    return w_s 
+    return math.exp(w_s)
 
 def calculate_stability_stdev(arr):
     df = arr.diff().fillna(0)
@@ -175,6 +177,7 @@ def extract_popularity(checkins, config, p, k):
 
 def aggregate_stats(groups, stat_lp, p, k, t, d):
     t0 = time.time()
+    # groups['t_diff'] = (groups['time1'].diff().fillna(0) + groups['time2'].diff().fillna(0))/2
     ### Extracting the basic statistic from the co-location dataset
     aggregations = {
         'lat1':'count',                         ### Frequency
