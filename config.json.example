@@ -54,11 +54,12 @@
       "compress_output":false
     },
     "preprocessing":{
-      "run":"false",
+      "run_extraction":false,
       "read_original":false,
       "extract_friendships":false,
       "ids": ["user", "location", "checkin"],
-      "user_visit":false
+      "user_visit":false,
+      "sort_colocation":false
     }
   },
 

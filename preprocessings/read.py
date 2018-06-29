@@ -14,7 +14,8 @@ import gc
 PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local library
-from common.functions import IS_DEBUG, debug, fn_timer, make_sure_path_exists, is_file_exists, read_config
+from common.functions import IS_DEBUG, debug, fn_timer, make_sure_path_exists, is_file_exists, read_config, \
+  remove_file_if_exists
 from common.visual import gmplot
 
 RAW_CHECKIN_FILE = 'checkin.csv'
@@ -305,6 +306,32 @@ def generate_user_visit(config):
         del user_visits
         gc.collect()
 
+def sort_colocation(config):
+  kwargs = config['kwargs']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  is_read_compressed = config['kwargs']['sci']['read_compressed']
+  colocation_root = config['directory']['colocation']
+  if is_read_compressed is False:
+      colocation_name = config['intermediate']['colocation']['csv']
+      compression = None
+  else:
+      colocation_name = config['intermediate']['colocation']['compressed']
+      compression = 'bz2'
+  for dataset_name in datasets:
+    p = config['dataset'].index(dataset_name)
+    for mode in modes:
+      k = config['mode'].index(mode)
+      for t in t_diffs:
+        for d in s_diffs:
+          colocation_df = read_colocation_file(config, p, k, t, d)
+          colocation_df.sort_values(['user1', 'user2', 'time1', 'time2', 'location1', 'location2'], inplace=True)
+          colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
+          remove_file_if_exists(colocation_fullname)
+          colocation_df.to_csv(colocation_fullname, index=False, header=True, compression=compression)
+
 @fn_timer
 def main():
   ### Read config
@@ -312,13 +339,16 @@ def main():
   kwargs = config['kwargs']
 
   ### Read original data and generate standardized data
-  if kwargs['preprocessing']['run'] is True:
+  if kwargs['preprocessing']['run_extraction'] is True:
     if kwargs['preprocessing']['read_original'] is True:
       dataset_root = config['directory']['dataset']
       preprocess_data(dataset_root)
   ### Extract user visit from co-location
   if kwargs['preprocessing']['user_visit'] is True:
     generate_user_visit(config)
+  ### Sorting co-location based on several criteria
+  if kwargs['preprocessing']['sort_colocation'] is True:
+    sort_colocation(config)
 
 if __name__ == '__main__':
   main()
