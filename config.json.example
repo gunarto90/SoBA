@@ -36,7 +36,8 @@
       "read_compressed":true,
       "compress_output":false,
       "start":0,
-      "finish":-1
+      "finish":-1,
+      "remove_intermediate_after_finished":true
     },
     "pgt_eval":false,
     "partial_colocation":{
