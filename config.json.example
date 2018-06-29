@@ -16,13 +16,10 @@
       "clear_dir":false
     },
     "sci":{
-      "run":false,
-      "read_compressed":false,
-      "compress_output":false
+      "run":false
     },
     "sci_eval":{
       "run":false,
-      "read_compressed":true,
       "features":"summary_old_new",
       "sampling":["original"],
       "kfold":5,
@@ -33,8 +30,6 @@
     },
     "pgt":{
       "run":false,
-      "read_compressed":true,
-      "compress_output":false,
       "start":0,
       "finish":-1,
       "remove_intermediate_after_finished":true
@@ -48,18 +43,15 @@
       "t_target":[7200, 5400, 3600, 1800],
       "d_target":[1000, 750, 500, 250, 0]
     },
-    "combine":{
-      "run":false,
-      "read_compressed":false,
-      "compress_output":false
-    },
     "preprocessing":{
       "run_extraction":false,
       "read_original":false,
       "extract_friendships":false,
       "ids": ["user", "location", "checkin"],
       "user_visit":false,
-      "sort_colocation":false
+      "sort_colocation":false,
+      "read_compressed":false,
+      "compress_output":false
     }
   },
 

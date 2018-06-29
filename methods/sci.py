@@ -50,7 +50,7 @@ def extract_aggregated_visit(visit_per_venue, p_l):
 @fn_timer
 def write_statistics(df, config, p, k, t, d):
     dataset_names = config['dataset']
-    compressed = config['kwargs']['sci']['compress_output']
+    compressed = config['kwargs']['preprocessing']['compress_output']
     sci_root = config['directory']['sci']
     make_sure_path_exists('/'.join([sci_root, dataset_names[p]]))
     if compressed is True:
@@ -261,7 +261,7 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     debug('p', p, 'k', k, 't', t, 'd', d)
     ### Check if SCI intermediate exists
     dataset_names = config['dataset']
-    compressed = config['kwargs']['sci']['compress_output']
+    compressed = config['kwargs']['preprocessing']['compress_output']
     sci_root = config['directory']['sci']
     make_sure_path_exists('/'.join([sci_root, dataset_names[p]]))
     if compressed is True:
