@@ -84,8 +84,8 @@ def extract_personal_pgt(config, p, k):
             debug('#Venues', len(venues), 'p', p, 'k', k)
             kwargs = config['kwargs']
             n_core = kwargs['n_core']
-            start = kwargs['pgt']['start']
-            finish = kwargs['pgt']['finish']
+            start = kwargs['pgt']['personal']['start']
+            finish = kwargs['pgt']['personal']['finish']
             begins, ends = init_begin_end(n_core, len(grouped), start=start, finish=finish)
             # debug('Begins', begins)
             # debug('Ends', ends)
@@ -106,7 +106,7 @@ def extract_personal_pgt(config, p, k):
             result.sort_values(['user', 'location'], inplace=True)
             result.to_csv(pgt_personal_file, index=False, header=True)
             ### Clean up mess if needed
-            if config['kwargs']['pgt']['remove_intermediate_after_finished'] is True:
+            if config['kwargs']['pgt']['personal']['remove_intermediate_after_finished'] is True:
                 for i in range(len(begins)):
                     start = begins[i]
                     finish = ends[i]

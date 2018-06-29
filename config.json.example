@@ -30,9 +30,11 @@
     },
     "pgt":{
       "run":false,
-      "start":0,
-      "finish":-1,
-      "remove_intermediate_after_finished":true
+      "personal":{
+        "start":0,
+        "finish":-1,
+        "remove_intermediate_after_finished":false
+      }
     },
     "pgt_eval":false,
     "partial_colocation":{
