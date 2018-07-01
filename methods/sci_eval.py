@@ -68,7 +68,7 @@ def sci_evaluation(config, p, k, t, d):
             notes = ['SCI+']
             assign = [ [0,1,2,4,6] ]
         elif selected_feature_set == 'sci_plus_all':
-            notes = ['SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability_stdev', 'Popularity', 'Stability_average', 'Stability_old',
+            notes = ['All', 'SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability_stdev', 'Popularity', 'Stability_average', 'Stability_old',
                 'F+D', 'F+TD', 'F+TSD', 'F+P', 'D+TD', 'D+TSD', 'D+P', 'TD+TSD', 'TD+P', 'TSD+P', 
                 'F+D+TD', 'F+D+TSD', 'F+D+P', 'F+TD+TSD', 'F+TD+P', 
                 'F+TSD+P', 'D+TD+TSD', 'D+TD+P', 'D+TSD+P', 'TD+TSD+P', 
@@ -79,7 +79,7 @@ def sci_evaluation(config, p, k, t, d):
                 'D+TD+TSD+TSA', 'D+TD+P+TSA', 'D+TSD+P+TSA',
                 'F+D+TD+TSD+P', 'F+D+TD+TSD+TSA', 'F+D+TD+P+TSA', 'F+D+TSD+P+TSA', 'F+TD+TSD+P+TSA', 'D+TD+TSD+P+TSA'
             ]
-            assign = [ [0,1,2,4,6], [0], [1], [2], [3], [4], [5], [6],
+            assign = [ [0,1,2,3,4,5,6], [0,1,2,4,6], [0], [1], [2], [3], [4], [5], [6],
                 [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], 
                 [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], 
                 [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], 
