@@ -31,9 +31,16 @@
     "pgt":{
       "run":false,
       "personal":{
+        "run":false,
         "start":0,
         "finish":-1,
-        "remove_intermediate_after_finished":false
+        "clean_temp":false
+      },
+      "global":{
+        "run":false,
+        "start":0,
+        "finish":-1,
+        "clean_temp":false
       }
     },
     "pgt_eval":false,
@@ -97,7 +104,8 @@
     "pgt":{
       "personal":"pgt_personal_{}.csv",
       "personal_part":"pgt_personal_{}_s{}_f{}.csv",
-      "global":"pgt_global_{}.pickle",
+      "global":"pgt_global_{}.csv",
+      "global_part":"pgt_global_{}_s{}_f{}.csv",
       "pgt_output":"pgt_evaluation_p{}_k{}_t{}_d{}.csv",
       "pgt_output_compressed":"pgt_evaluation_p{}_k{}_t{}_d{}.csv.bz2",
       "user_visit":"user_visit_{}.csv.bz2"

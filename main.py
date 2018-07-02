@@ -11,7 +11,7 @@ from methods.colocation import process_map, process_reduce, prepare_colocation, 
   generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
 from methods.sci_eval import sci_evaluation
-from methods.pgt import extract_personal_pgt
+from methods.pgt import extract_personal_pgt, extract_global_pgt
 
 @fn_timer
 def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
@@ -147,7 +147,10 @@ def run_pgt(config):
     for mode in modes:
       k = all_modes.index(mode)
       debug('Run PGT Extraction on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
-      extract_personal_pgt(config, p, k)
+      if kwargs['pgt']['personal']['run']:
+        extract_personal_pgt(config, p, k)
+      if kwargs['pgt']['global']['run']:
+        extract_global_pgt(config, p, k)
       # for t_diff in t_diffs:
       #   for s_diff in s_diffs:
       #     pass
