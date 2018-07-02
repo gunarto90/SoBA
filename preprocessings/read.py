@@ -85,7 +85,7 @@ def read_snap_stanford_checkin(root, dataset='gowalla', write=True):
 """
 Read the standardized data
 """
-def read_processed(root, dataset='gowalla', mode='all', id='user'):
+def read_processed(root, dataset='gowalla', mode='all', id='user', filter=True):
   filename = 'checkin_{}.csv.gz'.format(mode)
   'user', 'timestamp', 'latitude', 'longitude', 'location'
   dtypes = {
@@ -100,7 +100,8 @@ def read_processed(root, dataset='gowalla', mode='all', id='user'):
   ### Apply filtering
   ### User count > 10 and location visit > 1 (otherwise there is no co-location) 
   ### and must have visited 10 different places
-  df = df[(df['u_count'] > 10) & (df['v_count'] > 1) & (df['visit_unique'] > 10)]
+  if filter is True:
+    df = df[(df['u_count'] > 10) & (df['v_count'] > 1) & (df['visit_unique'] > 10)]
   df.drop(['u_count', 'v_count', 'visit_unique'], axis=1, inplace=True)
   ### Adding spatiotemporal information from dataframe
   if id == 'checkin':
@@ -156,10 +157,10 @@ def visualize_data(df):
   gmplot(temp)
 
 @fn_timer
-def extract_checkins(dataset_name, mode, config, id):
-  debug('Processing %s [%s] for each %s' % (dataset_name, mode, id))
+def extract_checkins(dataset_name, mode, config, id, filter):
+  debug('Processing %s [%s] for each %s [filter=%s]' % (dataset_name, mode, id, filter))
   dataset_root = config['directory']['dataset']
-  df, grouped = read_processed(dataset_root, dataset_name, mode, id)
+  df, grouped = read_processed(dataset_root, dataset_name, mode, id, filter)
   debug('#checkins', len(df))
   if grouped is not None:
     debug('#%ss' % id, len(grouped))
@@ -175,8 +176,8 @@ Output:
 - Single dataframe consists of all checkins
 - Grouped dataframe based on the user
 """
-def extract_checkins_per_user(dataset_name, mode, config):
-  df, grouped = extract_checkins(dataset_name, mode, config, 'user')
+def extract_checkins_per_user(dataset_name, mode, config, filter=True):
+  df, grouped = extract_checkins(dataset_name, mode, config, 'user', filter=filter)
   return df, grouped
 
 """
@@ -189,8 +190,8 @@ Output:
 - Single dataframe consists of all checkins
 - Grouped dataframe based on the venue
 """
-def extract_checkins_per_venue(dataset_name, mode, config):
-  df, grouped = extract_checkins(dataset_name, mode, config, 'location')
+def extract_checkins_per_venue(dataset_name, mode, config, filter=True):
+  df, grouped = extract_checkins(dataset_name, mode, config, 'location', filter=filter)
   return df, grouped
 
 """
@@ -203,8 +204,8 @@ Output:
 - Single dataframe consists of all checkins
 - None
 """
-def extract_checkins_all(dataset_name, mode, config):
-  df, grouped = extract_checkins(dataset_name, mode, config, 'checkin')
+def extract_checkins_all(dataset_name, mode, config, filter=True):
+  df, grouped = extract_checkins(dataset_name, mode, config, 'checkin', filter=filter)
   return df, grouped
 
 def extract_friendships(dataset_name, config):
@@ -262,10 +263,6 @@ def generate_user_visit(config):
   kwargs = config['kwargs']
   datasets = kwargs['active_dataset']
   modes = kwargs['active_mode']
-  t_diffs = kwargs['ts']
-  s_diffs = kwargs['ds']
-  t = max(t_diffs)  ### Read the largest possible co-locations
-  d = max(s_diffs)  ### Read the largest possible co-locations
   for dataset_name in datasets:
     p = config['dataset'].index(dataset_name)
     for mode in modes:
@@ -276,34 +273,24 @@ def generate_user_visit(config):
       if is_file_exists(final_name):
         debug('File %s already exists' % final_name)
       else:
-        df = None
-        i = 1
-        debug('Extracting user visits in colocations', dataset_name, p, mode, k)
-        for colocations in read_colocation_chunk(config, p, k, t, d):
-          user_visits = []
-          user_visits.append(colocations[['user1', 'location1']].drop_duplicates())
-          user_visits.append(colocations[['user2', 'location1']].drop_duplicates())
-          user_visits.append(colocations[['user1', 'location2']].drop_duplicates())
-          user_visits.append(colocations[['user2', 'location2']].drop_duplicates())
-          user_visits[0].rename(columns={'user1':'user', 'location1':'location'}, inplace=True)
-          user_visits[1].rename(columns={'user2':'user', 'location1':'location'}, inplace=True)
-          user_visits[2].rename(columns={'user1':'user', 'location2':'location'}, inplace=True)
-          user_visits[3].rename(columns={'user2':'user', 'location2':'location'}, inplace=True)
-          del colocations
-          gc.collect()
-          temp = pd.concat(user_visits).drop_duplicates()
-          if df is None:
-            df = temp
-          else:
-            df.append(temp).drop_duplicates()
-          debug('Processing chunks', '..'*i)
-          i += 1
-        debug('Writing result to file', out_dir, out_name)
-        df.sort_values(['user', 'location'], inplace=True)
-        df.to_csv(final_name, compression='bz2', header=True, index=False)
-        if df is not None:
-          del df
-        del user_visits
+        df, _ = extract_checkins_all(dataset_name, mode, config, filter=True)
+        visits = df.groupby(['user', 'location'])['timestamp'].count().reset_index()
+        visits.rename(columns={"timestamp": "visit_count"}, inplace=True)
+        u_count = df.groupby('user')['timestamp'].count().reset_index()
+        u_count.rename(columns={"timestamp": "user_count"}, inplace=True)
+        v_count = df.groupby('location')['timestamp'].count().reset_index()
+        v_count.rename(columns={"timestamp": "location_count"}, inplace=True)
+        visits = visits.join(u_count, on='user', how='outer', rsuffix='r')
+        visits = visits.join(v_count, on='location', how='outer', rsuffix='r')
+        visits = visits[['user', 'location', 'visit_count', 'user_count', 'location_count']]
+        visits.fillna(0, inplace=True)
+        ### All of these must have the same amount
+        debug('Total #Checkins', len(df))
+        debug('#Total user visits', int(visits['visit_count'].sum()))
+        debug('#Total user counts', int(visits.drop_duplicates(['user'])['user_count'].sum()))
+        debug('#Total location counts', int(visits.drop_duplicates(['location'])['location_count'].sum()))
+        visits.to_csv(final_name, header=True, index=False, compression='bz2')
+        del visits, df
         gc.collect()
 
 def sort_colocation(config):
