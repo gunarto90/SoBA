@@ -104,6 +104,15 @@ def entropy(data):
     ent -= pi * log(pi)
   return ent
 
+def entropy_np(data):
+  total = sum(data)
+  if total <= 0:
+    return 0.0
+  p_i = data / total
+  p_i = np.trim_zeros(p_i)
+  p_i = -1 * p_i * np.log(p_i)
+  return sum(p_i)
+
 """
 Input: shapely points
 Output: float

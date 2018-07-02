@@ -12,22 +12,13 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local libraries
 from common.functions import read_config, debug, make_sure_path_exists, is_file_exists, haversine_np, \
-    merge_dicts, init_begin_end, remove_file_if_exists, entropy
+    merge_dicts, init_begin_end, remove_file_if_exists, entropy_np
 from preprocessings.read import extract_friendships, read_colocation_file, determine_social_tie, \
     extract_checkins_per_user, extract_checkins_per_venue, df_uid
 
 ### parameters
 cd = 1.5    ### distance parameter in personal density function [1,3]
 ct = 0.2    ### temporal parameter in temporal dependencies [0.1, 0.3]
-
-"""
-Global feature
-- Aggregate the count of (user, location)   #1
-- Aggregate the count of (location)         #2
-- Divide #1 with #2                         #3
-- For each location, calculate the entropy from #3
--- Not tested yet
-"""
 
 def calculate_density(row, cd, user, venues):
     temp = venues.loc[venues.location == row['location'], ['longitude', 'latitude']]
@@ -36,10 +27,10 @@ def calculate_density(row, cd, user, venues):
     temp = haversine_np(lons, lats, user['longitude'], user['latitude'])
     return sum(np.exp(-cd * temp)/len(user))
 
-def calculate_entropy(row, visits):
-    temp = visits.loc[visits.location == row['location']]
-    ### Calculate entropy of 
-    return entropy(temp['p_x'].values)
+def calculate_entropy(arr):
+    if sum(arr) > 0:
+        return entropy_np(arr)
+    else: return 0.0
 
 def extract_pi_loc_k(checkins, grouped, venues, user_visit, config, p, k, start, finish, feature):
     pgt_root = config['directory']['pgt']
@@ -51,39 +42,48 @@ def extract_pi_loc_k(checkins, grouped, venues, user_visit, config, p, k, start,
     if is_file_exists(pgt_file_part) is True:
         pass
     else:
+        user_visit = user_visit[(user_visit['visit_count'] > 0)]
+        debug('start', start, 'finish', finish)
         if feature == 'personal':
-            user_visit = user_visit[(user_visit['visit_count'] > 0)]
             ids = grouped['user'].values
-            temp_match = venues.isin(user_visit['location'].values)
-            temp = venues[temp_match['location']].drop_duplicates()
-            debug('#venues in user density calculation', len(temp), 'start', start, 'finish', finish)
+            grouping = 'user'
+            result = pd.DataFrame(columns=['user', 'location', 'p_i'])
         elif feature == 'global':
-            visits = checkins[['user', 'location']].drop_duplicates(['user', 'location'])
-            visits['p_x'] = visits.groupby(['user', 'location']).transform('count')
-            visits['p_y'] = visits.groupby(['location']).transform('count')
-            debug(visits.head())
-            visits['p_x'] = visits['p_x'] / visits['p_y']
-            debug(visits.head())
-        result = pd.DataFrame(columns=['user', 'location', 'p_i'])
+            ids = grouped['location'].values
+            grouping = 'location'
+            result = pd.DataFrame(columns=['location', 'p_i'])
         t0 = time.time()
         for i in range(start, finish):
             u_i = ids[i]
-            if feature == 'personal':
-                df = df_uid(checkins, u_i, config, 'user')
-                visit_match = user_visit.isin({'location':temp['location'], 'user':df['user'].unique()})
-                visit_temp = user_visit[visit_match['location'] | visit_match['user']]
-                if len(visit_temp > 0):
+            df = df_uid(checkins, u_i, config, grouping)
+            visit_match = user_visit.isin({grouping:df[grouping].unique()})
+            visit_temp = user_visit[visit_match[grouping]]
+            if len(visit_temp > 0):
+                if feature == 'personal':
+                    ### Extract the p_i of each user's visit
                     visit_temp['p_i'] = visit_temp.apply(lambda x: calculate_density(x, cd, df, venues), axis=1)
-            elif feature == 'global':
-                visit_match = visits.isin({'location':df['location'].unique()})
-                visit_temp = visits[visit_match['location']]
-                if len(visit_temp > 0):
-                    visit_temp['p_i'] = visit_temp.apply(lambda x: calculate_entropy(x, visits), axis=1)
-            visit_temp = visit_temp[['user', 'location', 'p_i']]
-            result = result.append(visit_temp, ignore_index=True)
+                    visit_temp = visit_temp[['user', 'location', 'p_i']]
+                    result = result.append(visit_temp, ignore_index=True)
+                elif feature == 'global':
+                    ### Aggregate visit on each location
+                    aggregations = {
+                        'user_count':{
+                            'entropy':lambda x: calculate_entropy(x)
+                        },
+                    }
+                    grouped = visit_temp.groupby(['location']) \
+                        .agg(aggregations)
+                    grouped.columns = ["_".join(x) for x in grouped.columns.ravel()]
+                    grouped.rename(columns={"user_count_entropy": "p_i"}, inplace=True)
+                    grouped.reset_index(inplace=True)
+                    # debug(grouped.columns.values)
+                    # debug(grouped.head())
+                    grouped = grouped[['location', 'p_i']]
+                    result = result.append(grouped, ignore_index=True)
         t1 = time.time()
         ### Writing to temp file
-        result.drop_duplicates()
+        if feature == 'personal':
+            result.drop_duplicates(subset=['user', 'location'], inplace=True)
         result.to_csv(pgt_file_part, index=False, header=True)
         debug('Finished density calculation into %s in %s seconds' % (pgt_file_part, str(t1-t0)))
 
@@ -130,7 +130,10 @@ def prepare_extraction(config, feature, p, k):
                 config, p, k, begins[i-1], ends[i-1]) \
                 for i in xrange(len(begins), 0, -1))
             ### Reduce step
-            result = pd.DataFrame(columns=['user', 'location', 'p_i'])
+            if feature == 'personal':
+                result = pd.DataFrame(columns=['user', 'location', 'p_i'])
+            elif feature == 'global':
+                result = pd.DataFrame(columns=['location', 'p_i'])
             for i in range(len(begins)):
                 start = begins[i]
                 finish = ends[i]
@@ -138,8 +141,11 @@ def prepare_extraction(config, feature, p, k):
                     config['intermediate']['pgt']['%s_part' % feature].format(modes[k], start, finish)])
                 temp = pd.read_csv(pgt_file_part)
                 result = result.append(temp, ignore_index=True)
-            result.drop_duplicates(subset=['user', 'location'], inplace=True)
-            result.sort_values(['user', 'location'], inplace=True)
+            if feature == 'personal':
+                result.drop_duplicates(subset=['user', 'location'], inplace=True)
+                result.sort_values(['user', 'location'], inplace=True)
+            elif feature == 'global':
+                result.sort_values(['location'], inplace=True)
             result.to_csv(pgt_file, index=False, header=True)
             ### Clean up mess if needed
             if config['kwargs']['pgt'][feature]['clean_temp'] is True:
