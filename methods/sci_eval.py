@@ -24,7 +24,7 @@ from common.functions import read_config, debug, fn_timer, \
 def sci_evaluation(config, p, k, t, d):
     debug('Evaluating SCI for p{}, k{}, t{}, d{}'.format(p, k, t, d))
     dataset_names = config['dataset']
-    compressed = config['kwargs']['preprocessing']['read_compressed']
+    compressed = config['kwargs']['read_compressed']
     sci_root = config['directory']['sci']
     make_sure_path_exists('/'.join([sci_root, dataset_names[p]]))
     if compressed is True:

@@ -1,10 +1,14 @@
 {
   "kwargs": {
-    "ts": [7200],
-    "ds": [0.01],
     "n_core": 4,
+    "read_compressed":true,
+    "compress_output":true,
+
     "active_dataset": ["foursquare"],
     "active_mode": ["weekend"],
+    "ts": [7200],
+    "ds": [0.01],
+
     "colocation":{
       "run":false,
       "start":0,
@@ -15,6 +19,7 @@
       "early_stop":0,
       "clear_dir":false
     },
+
     "sci":{
       "run":false
     },
@@ -28,22 +33,24 @@
       ],
       "sampling_options":["original", "over", "under", "combo"]
     },
+
     "pgt":{
       "run":false,
       "personal":{
         "run":false,
         "start":0,
         "finish":-1,
-        "clean_temp":false
+        "clean_temp":true
       },
       "global":{
         "run":false,
         "start":0,
         "finish":-1,
-        "clean_temp":false
+        "clean_temp":true
       }
     },
     "pgt_eval":false,
+
     "partial_colocation":{
       "p":[2],
       "k":[2],
@@ -52,15 +59,14 @@
       "t_target":[7200, 5400, 3600, 1800],
       "d_target":[1000, 750, 500, 250, 0]
     },
+    
     "preprocessing":{
       "run_extraction":false,
       "read_original":false,
       "extract_friendships":false,
       "ids": ["user", "location", "checkin"],
       "user_visit":false,
-      "sort_colocation":false,
-      "read_compressed":false,
-      "compress_output":false
+      "sort_colocation":false
     }
   },
 

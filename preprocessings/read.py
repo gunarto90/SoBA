@@ -230,7 +230,7 @@ def df_uid(df, uid, config, force_id=None):
 @fn_timer
 def read_colocation_file(config, p, k, t, d, chunksize=None):
     ### Read co-location from file
-    is_read_compressed = config['kwargs']['preprocessing']['read_compressed']
+    is_read_compressed = config['kwargs']['read_compressed']
     colocation_root = config['directory']['colocation']
     if is_read_compressed is False:
         colocation_name = config['intermediate']['colocation']['csv']
@@ -299,7 +299,7 @@ def sort_colocation(config):
   modes = kwargs['active_mode']
   t_diffs = kwargs['ts']
   s_diffs = kwargs['ds']
-  is_read_compressed = config['kwargs']['preprocessing']['read_compressed']
+  is_read_compressed = config['kwargs']['read_compressed']
   colocation_root = config['directory']['colocation']
   if is_read_compressed is False:
       colocation_name = config['intermediate']['colocation']['csv']
