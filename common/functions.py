@@ -174,11 +174,6 @@ def make_sure_path_exists(path):
 
 def is_file_exists(filename):
   return os.path.isfile(filename)
-  # try:
-  #   with open(filename, 'r'):
-  #     return True
-  # except:
-  #   return False
 
 def remove_file_if_exists(filename):
   try:

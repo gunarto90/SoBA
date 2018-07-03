@@ -2,16 +2,17 @@
 from joblib import Parallel, delayed
 import math
 import gc
+import sys
 ### Custom libraries
 from common.functions import IS_DEBUG, read_config, debug, fn_timer, \
-  init_begin_end, make_sure_path_exists, remove_file_if_exists
+  init_begin_end, make_sure_path_exists, remove_file_if_exists, is_file_exists
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, \
   extract_checkins_all
 from methods.colocation import process_map, process_reduce, prepare_colocation, \
   generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
 from methods.sci_eval import sci_evaluation
-from methods.pgt import extract_personal_pgt, extract_global_pgt
+from methods.pgt import extract_personal_pgt, extract_global_pgt, extract_pgt
 
 @fn_timer
 def map_reduce_colocation(config, checkins, grouped, p, k, t_diff, s_diff):
@@ -140,8 +141,8 @@ def run_pgt(config):
   all_modes = config['mode']
   datasets = kwargs['active_dataset']
   modes = kwargs['active_mode']
-  # t_diffs = kwargs['ts']
-  # s_diffs = kwargs['ds']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
   for dataset_name in datasets:
     p = all_datasets.index(dataset_name)
     for mode in modes:
@@ -151,16 +152,16 @@ def run_pgt(config):
         extract_personal_pgt(config, p, k)
       if kwargs['pgt']['global']['run']:
         extract_global_pgt(config, p, k)
-      # for t_diff in t_diffs:
-      #   for s_diff in s_diffs:
-      #     pass
-      #     gc.collect()
+      for t_diff in t_diffs:
+        for s_diff in s_diffs:
+          extract_pgt(config, p, k, t_diff, s_diff)
+          gc.collect()
 
-def main():
+def main(config_name='config.json'):
   ### Started the program
-  debug('Started SCI+')
+  debug('Started SCI+', config_name)
   ### Read config
-  config = read_config()
+  config = read_config(config_name)
   kwargs = config['kwargs']
   ### Co-location
   is_run = kwargs['colocation']['run']
@@ -184,4 +185,10 @@ def main():
   debug('Finished SCI+')
 
 if __name__ == '__main__':
-  main()
+  n_args = len(sys.argv)
+  config_name = 'config.json'
+  if n_args > 1:
+    config_name = sys.argv[1]
+  if is_file_exists(config_name) is False:
+    config_name = 'config.json'
+  main(config_name=config_name)
