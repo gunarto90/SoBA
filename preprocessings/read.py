@@ -228,7 +228,7 @@ def df_uid(df, uid, config, force_id=None):
   return df.loc[df[id] == uid]
 
 @fn_timer
-def read_colocation_file(config, p, k, t, d, chunksize=None):
+def read_colocation_file(config, p, k, t, d, chunksize=None, usecols=None):
     ### Read co-location from file
     is_read_compressed = config['kwargs']['read_compressed']
     colocation_root = config['directory']['colocation']
@@ -245,14 +245,14 @@ def read_colocation_file(config, p, k, t, d, chunksize=None):
         't_diff':np.int_,'s_diff':np.float_
     }
     if chunksize is None:
-      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes)
+      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, usecols=usecols)
     else:
-      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, chunksize=chunksize)
+      colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, chunksize=chunksize, usecols=usecols)
     return colocation_df
 
-def read_colocation_chunk(config, p, k, t, d):
+def read_colocation_chunk(config, p, k, t, d, usecols=None):
   chunksize = 10 ** 6
-  return read_colocation_file(config, p, k, t, d, chunksize)
+  return read_colocation_file(config, p, k, t, d, chunksize, usecols)
 
 def determine_social_tie(colocation_df, friend_df):
     colocation_df = pd.merge(colocation_df, friend_df, on=['user1','user2'], how='left', indicator='link')

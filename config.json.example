@@ -86,38 +86,47 @@
   },  
 
   "directory": {
-    "dataset": "dataset",
-    "intermediate": "intermediate",
-    "visual":"visual",
-    "colocation":"intermediate/colocation",
-    "sci":"intermediate/sci",
-    "pgt":"intermediate/pgt",
-    "report":"reports"
-  },
-  "intermediate": {
-    "colocation":{
-      "csv":"co_raw_p{}_k{}_t{}_d{}.csv",
-      "compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
-      "part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
-      "re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
-      "kdtree":"kd_tree_p{}_k{}.pickle.bz2"
+      "dataset": "dataset",
+      "intermediate": "intermediate",
+      "visual":"visual",
+      "colocation":"intermediate/colocation",
+      "sci":"intermediate/sci",
+      "pgt":"intermediate/pgt",
+      "pgt_temp":"intermediate/pgt/temp",
+      "report":"reports"
     },
-    "sci":{
-      "popularity":"sci_popularity_{}.pickle",
-      "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
-      "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
+    "intermediate": {
+      "colocation":{
+        "csv":"co_raw_p{}_k{}_t{}_d{}.csv",
+        "compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
+        "part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
+        "re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
+        "kdtree":"kd_tree_p{}_k{}.pickle.bz2"
+      },
+      "sci":{
+        "popularity":"sci_popularity_{}.pickle",
+        "evaluation":"evaluation_p{}_k{}_t{}_d{}.csv",
+        "evaluation_compressed":"evaluation_p{}_k{}_t{}_d{}.csv.bz2"
+      },
+      "pgt":{
+        "personal":"pgt_personal_{}.csv",
+        "personal_part":"pgt_personal_{}_s{}_f{}.csv",
+        "global":"pgt_global_{}.csv",
+        "global_part":"pgt_global_{}_s{}_f{}.csv",
+        "pgt_g0_personal":"pgt_g0_personal_{}.csv.bz2",
+        "pgt_g0_personal_part":"pgt_g0_personal_{}_chunk_{}.csv.bz2",
+        "pgt_g0_global":"pgt_g0_global_{}.csv.bz2",
+        "pgt_g0_global_part":"pgt_g0_global_{}_chunk_{}.csv.bz2",
+        "pgt_g1":"pgt_g1_{}.csv.bz2",        
+        "pgt_g2":"pgt_g2_{}.csv.bz2",
+        "pgt_g3":"pgt_g3_{}.csv.bz2",
+        "pgt_g4":"pgt_g4_{}.csv.bz2",
+        "pgt_output":"pgt_evaluation_p{}_k{}_t{}_d{}.csv",
+        "pgt_output_compressed":"pgt_evaluation_p{}_k{}_t{}_d{}.csv.bz2",
+        "user_visit":"user_visit_{}.csv.bz2"
+      }
     },
-    "pgt":{
-      "personal":"pgt_personal_{}.csv",
-      "personal_part":"pgt_personal_{}_s{}_f{}.csv",
-      "global":"pgt_global_{}.csv",
-      "global_part":"pgt_global_{}_s{}_f{}.csv",
-      "pgt_output":"pgt_evaluation_p{}_k{}_t{}_d{}.csv",
-      "pgt_output_compressed":"pgt_evaluation_p{}_k{}_t{}_d{}.csv.bz2",
-      "user_visit":"user_visit_{}.csv.bz2"
-    }
-  },
-
+    
   "dataset": ["gowalla", "brightkite", "foursquare"],
   "mode": ["all", "weekday", "weekend"],
   "maps_api": "GOOGLE MAPS API"
