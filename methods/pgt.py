@@ -203,8 +203,6 @@ def extract_global_pgt(config, p, k):
     prepare_extraction(config, 'global', p, k)
 
 def transform_colocation_pgt(config, p, k, t, d, feature):
-    pgt_root = config['directory']['pgt']
-    pgt_part_root = config['directory']['pgt_temp']
     dataset_names = config['dataset']
     modes = config['mode']
     pgt_root = config['directory']['pgt']
@@ -236,7 +234,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
             i = 0
             for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=10 ** 3, usecols=['user1', 'user2', 'location1', 'location2']):
                 g0_part = '/'.join([pgt_part_root, dataset_names[p], \
-                    config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], i)])
+                    config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], t, d, i)])
                 debug(g0_part)
                 if is_file_exists(g0_part) is False:
                     if feature == 'personal':
@@ -252,7 +250,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
             while(condition is True):
                 ### Iterate over all chunks
                 g0_part = '/'.join([pgt_part_root, dataset_names[p], \
-                    config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], i)])
+                    config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], t, d, i)])
                 if is_file_exists(g0_part) is False:
                     condition = False
                     break
@@ -264,7 +262,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
                 i = 0
                 while(condition is True):
                     g0_part = '/'.join([pgt_part_root, dataset_names[p], \
-                        config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], i)])
+                        config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], t, d, i)])
                     if is_file_exists(g0_part) is False:
                         condition = False
                         break
@@ -290,9 +288,9 @@ def personal_factor(config, p, k, t, d):
     pgt_root = config['directory']['pgt']
     make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
     g1_file = '/'.join([pgt_root, dataset_names[p], \
-        config['intermediate']['pgt']['pgt_g1'].format(modes[k])])
+        config['intermediate']['pgt']['pgt_g1'].format(modes[k], t, d)])
     g2_file = '/'.join([pgt_root, dataset_names[p], \
-        config['intermediate']['pgt']['pgt_g2'].format(modes[k])])
+        config['intermediate']['pgt']['pgt_g2'].format(modes[k], t, d)])
     if is_file_exists(g1_file) is False or is_file_exists(g2_file) is False:
         ### If it does not exist
         feature = 'personal'
@@ -308,8 +306,8 @@ def personal_factor(config, p, k, t, d):
         g2['g2'] = g2['max'] * g2['count']
         g1.to_csv(g1_file, header=True, index=False, compression='bz2')
         g2.to_csv(g2_file, header=True, index=False, compression='bz2')
-        debug(g1.head())
-        debug(g2.head())
+        # debug(g1.head())
+        # debug(g2.head())
         del colocation_df
     else:
         g1 = pd.read_csv(g1_file)
@@ -325,7 +323,7 @@ def global_factor(config, p, k, t, d, g2):
     pgt_root = config['directory']['pgt']
     make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
     g3_file = '/'.join([pgt_root, dataset_names[p], \
-        config['intermediate']['pgt']['pgt_g3'].format(modes[k])])
+        config['intermediate']['pgt']['pgt_g3'].format(modes[k], t, d)])
     if is_file_exists(g3_file) is False:
         feature = 'global'
         colocation_df = transform_colocation_pgt(config, p, k, t, d, feature)
@@ -334,7 +332,7 @@ def global_factor(config, p, k, t, d, g2):
         g3.sort_values(['user1', 'user2'], inplace=True)
         g3['g3'] = g2['g2'] * g3['sum']
         g3.to_csv(g3_file, header=True, index=False, compression='bz2')
-        debug(g3.head())
+        # debug(g3.head())
         del colocation_df
     else:
         g3 = pd.read_csv(g3_file)
