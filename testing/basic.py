@@ -9,7 +9,7 @@ sys.path.append(PWD)
 ### Custom libraries
 from common.functions import read_config, debug
 from preprocessings.read import extract_checkins_per_user, extract_checkins_per_venue, \
-    extract_checkins_all, extract_friendships
+    extract_checkins_all, extract_friendships, read_colocation_file, determine_social_tie
 
 def extract_checkins(config, dataset_name, mode, run_by):
   ### Extracting checkins
@@ -22,11 +22,11 @@ def extract_checkins(config, dataset_name, mode, run_by):
   return checkins, grouped
 
 ### Testing reading the dataset and its statistics
-def test1():
+def test_checkin_stats():
   ### Started the program
-  debug('Started Test on SCI+')
+  debug('Started Test test_checkin_stats on SCI+')
   ### Read config
-  config = read_config()
+  config = read_config('config_test.json')
   kwargs = config['kwargs']
   run_by = kwargs['colocation']['run_by']
   all_datasets = config['dataset']
@@ -55,5 +55,33 @@ def test1():
       debug('#friend w/ checkins', len(friend_df))
   debug('Finished Test on SCI+')
 
+def test_colocation_stats():
+  ### Started the program
+  debug('Started Test test_checkin_stats on SCI+')
+  config = read_config('config_test.json')
+  ### Read config
+  config = read_config('config_test.json')
+  kwargs = config['kwargs']
+  all_datasets = config['dataset']
+  all_modes = config['mode']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  for dataset_name in datasets:
+    p = all_datasets.index(dataset_name)
+    friend_df = extract_friendships(dataset_name, config)
+    for mode in modes:
+      k = all_modes.index(mode)
+      for t in t_diffs:
+        for d in s_diffs:
+          colocation_df = read_colocation_file(config, p, k, t, d)
+          colocation_df = determine_social_tie(colocation_df, friend_df)
+          colocation_df = colocation_df[['user1', 'user2', 'link']].drop_duplicates(['user1', 'user2'])
+          debug('#colocations', len(colocation_df), sum(colocation_df['link']), 'p', p, 'k', k, 't', t, 'd', d)
+  debug('Finished Test on SCI+')
+
 if __name__ == '__main__':
-  test1()
+  pass
+  # test_checkin_stats()
+  test_colocation_stats()
