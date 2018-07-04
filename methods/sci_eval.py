@@ -68,27 +68,47 @@ def sci_evaluation(config, p, k, t, d):
             notes = ['SCI+']
             assign = [ [0,1,2,4,6] ]
         elif selected_feature_set == 'sci_plus_all':
-            notes = ['All', 'SCI+', 'Frequency', 'Diversity', 'Duration', 'Stability_stdev', 'Popularity', 'Stability_average', 'Stability_old',
-                'F+D', 'F+TD', 'F+TSD', 'F+P', 'D+TD', 'D+TSD', 'D+P', 'TD+TSD', 'TD+P', 'TSD+P', 
-                'F+D+TD', 'F+D+TSD', 'F+D+P', 'F+TD+TSD', 'F+TD+P', 
-                'F+TSD+P', 'D+TD+TSD', 'D+TD+P', 'D+TSD+P', 'TD+TSD+P', 
-                'F+D+TD+TSD', 'F+D+TD+P', 'F+D+TSD+P', 'F+TD+TSD+P', 'D+TD+TSD+P', 'SCI',
-                'F+TSA',  'D+TSA', 'TD+TSA', 'TSD+TSA', 'P+TSA',
-                'F+D+TSA', 'F+TD+TSA', 'F+TSD+TSA', 'F+P+TSA', 'D+TD+TSA', 'D+TSD+TSA', 'D+P+TSA', 'TD+TSD+TSA', 'TD+P+TSA', 'TSD+P+TSA',
-                'F+D+TD+TSA', 'F+D+TSD+TSA', 'F+D+P+TSA', 'F+TD+TSD+TSA', 'F+TD+P+TSA', 'F+TSD+P+TSA',
-                'D+TD+TSD+TSA', 'D+TD+P+TSA', 'D+TSD+P+TSA',
-                'F+D+TD+TSD+P', 'F+D+TD+TSD+TSA', 'F+D+TD+P+TSA', 'F+D+TSD+P+TSA', 'F+TD+TSD+P+TSA', 'D+TD+TSD+P+TSA'
+            notes = [
+                'F', 'D', 'TD', 'TSD', 'P', 'TSA', 'TS', 
+                'F+D', 'F+TD', 'F+TSD', 'F+P', 'F+TSA', 'F+TS', 'D+TD', 'D+TSD', 'D+P', 'D+TSA', 'D+TS', 
+                'TD+TSD', 'TD+P', 'TD+TSA', 'TD+TS', 'TSD+P', 'TSD+TSA', 'TSD+TS', 'P+TSA', 'P+TS', 'TSA+TS', 
+
+                'F+D+TD', 'F+D+TSD', 'F+D+P', 'F+D+TSA', 'F+D+TS', 'F+TD+TSD', 'F+TD+P', 'F+TD+TSA', 'F+TD+TS', 
+                'F+TSD+P', 'F+TSD+TSA', 'F+TSD+TS', 'F+P+TSA', 'F+P+TS', 'F+TSA+TS', 'D+TD+TSD', 'D+TD+P', 'D+TD+TSA', 'D+TD+TS',
+                'D+TSD+P', 'D+TSD+TSA', 'D+TSD+TS', 'D+P+TSA', 'D+P+TS', 'D+TSA+TS', 'TD+TSD+P', 'TD+TSD+TSA', 'TD+TSD+TS',
+                'TD+P+TSA', 'TD+P+TS', 'TD+TSA+TS', 'TSD+P+TSA', 'TSD+P+TS', 'TSD+TSA+TS', 'P+TSA+TS', 
+
+                'F+D+TD+TSD', 'F+D+TD+P', 'F+D+TD+TSA', 'F+D+TD+TS', 'F+D+TSD+P', 'F+D+TSD+TSA', 'F+D+TSD+TS', 
+                'F+D+P+TSA', 'F+D+P+TS', 'F+D+TSA+TS', 'F+TD+TSD+P', 'F+TD+TSD+TSA', 'F+TD+TSD+TS', 'F+TD+P+TSA', 
+                'F+TD+P+TS', 'F+TD+TSA+TS', 'F+TSD+P+TSA', 'F+TSD+P+TS', 'F+TSD+TSA+TS', 'F+P+TSA+TS', 'D+TD+TSD+P', 
+                'D+TD+TSD+TSA', 'D+TD+TSD+TS', 'D+TD+P+TSA', 'D+TD+P+TS', 'D+TD+TSA+TS', 'D+TSD+P+TSA', 'D+TSD+P+TS',
+                'D+TSD+TSA+TS', 'D+P+TSA+TS', 'TD+TSD+P+TSA', 'TD+TSD+P+TS', 'TD+TSD+TSA+TS', 'TD+P+TSA+TS', 'TSD+P+TSA+TS', 
+
+                'F+D+TD+TSD+P', 'F+D+TD+TSD+TSA', 'F+D+TD+TSD+TS', 'F+D+TD+P+TSA', 'F+D+TD+P+TS', 'F+D+TD+TSA+TS', 'F+D+TSD+P+TSA', 
+                'F+D+TSD+P+TS', 'F+D+TSD+TSA+TS', 'F+D+P+TSA+TS', 'F+TD+TSD+P+TSA', 'F+TD+TSD+P+TS', 'F+TD+TSD+TSA+TS', 'F+TD+P+TSA+TS', 
+                'F+TSD+P+TSA+TS', 'D+TD+TSD+P+TSA', 'D+TD+TSD+P+TS', 'D+TD+TSD+TSA+TS', 'D+TD+P+TSA+TS', 'D+TSD+P+TSA+TS', 'TD+TSD+P+TSA+TS', 
+                'F+D+TD+TSD+P+TSA', 'F+D+TD+TSD+P+TS', 'F+D+TD+TSD+TSA+TS', 'F+D+TD+P+TSA+TS', 'F+D+TSD+P+TSA+TS', 'F+TD+TSD+P+TSA+TS', 'D+TD+TSD+P+TSA+TS'
             ]
-            assign = [ [0,1,2,3,4,5,6], [0,1,2,4,6], [0], [1], [2], [3], [4], [5], [6],
-                [0, 1], [0, 2], [0, 3], [0, 4], [1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4], 
-                [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 2, 3], [0, 2, 4], 
-                [0, 3, 4], [1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4], 
-                [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 3, 4], [0, 2, 3, 4], [1, 2, 3, 4], [0,1,2,6], 
-                [0, 5], [1, 5], [2, 5], [3, 5], [4, 5],
-                [0, 1, 5], [0, 2, 5], [0, 3, 5], [0, 4, 5], [1, 2, 5], [1, 3, 5], [1, 4, 5], [2, 3, 5], [2, 4, 5], [3, 4, 5],
-                [0, 1, 2, 5], [0, 1, 3, 5], [0, 1, 4, 5], [0, 2, 3, 5],  [0, 2, 4, 5], [0, 3, 4, 5], 
-                [1, 2, 3, 5], [1, 2, 4, 5], [2, 3, 4, 5],
-                [0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [0, 1, 2, 4, 5], [0, 1, 3, 4, 5], [0, 2, 3, 4, 5], [1, 2, 3, 4, 5]
+            assign = [
+                [0], [1], [2], [3], [4], [5], [6], 
+                [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], 
+                [2, 3], [2, 4], [2, 5], [2, 6], [3, 4], [3, 5], [3, 6], [4, 5], [4, 6], [5, 6], 
+
+                [0, 1, 2], [0, 1, 3], [0, 1, 4], [0, 1, 5], [0, 1, 6], [0, 2, 3], [0, 2, 4], [0, 2, 5], [0, 2, 6], 
+                [0, 3, 4], [0, 3, 5], [0, 3, 6], [0, 4, 5], [0, 4, 6], [0, 5, 6], [1, 2, 3], [1, 2, 4], [1, 2, 5], [1, 2, 6], 
+                [1, 3, 4], [1, 3, 5], [1, 3, 6], [1, 4, 5], [1, 4, 6], [1, 5, 6], [2, 3, 4], [2, 3, 5], [2, 3, 6], 
+                [2, 4, 5], [2, 4, 6], [2, 5, 6], [3, 4, 5], [3, 4, 6], [3, 5, 6], [4, 5, 6], 
+
+                [0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 2, 5], [0, 1, 2, 6], [0, 1, 3, 4], [0, 1, 3, 5], [0, 1, 3, 6], 
+                [0, 1, 4, 5], [0, 1, 4, 6], [0, 1, 5, 6], [0, 2, 3, 4], [0, 2, 3, 5], [0, 2, 3, 6], [0, 2, 4, 5], 
+                [0, 2, 4, 6], [0, 2, 5, 6], [0, 3, 4, 5], [0, 3, 4, 6], [0, 3, 5, 6], [0, 4, 5, 6], [1, 2, 3, 4], 
+                [1, 2, 3, 5], [1, 2, 3, 6], [1, 2, 4, 5], [1, 2, 4, 6], [1, 2, 5, 6], [1, 3, 4, 5], [1, 3, 4, 6], 
+                [1, 3, 5, 6], [1, 4, 5, 6], [2, 3, 4, 5], [2, 3, 4, 6], [2, 3, 5, 6], [2, 4, 5, 6], [3, 4, 5, 6], 
+                
+                [0, 1, 2, 3, 4], [0, 1, 2, 3, 5], [0, 1, 2, 3, 6], [0, 1, 2, 4, 5], [0, 1, 2, 4, 6], [0, 1, 2, 5, 6], [0, 1, 3, 4, 5], 
+                [0, 1, 3, 4, 6], [0, 1, 3, 5, 6], [0, 1, 4, 5, 6], [0, 2, 3, 4, 5], [0, 2, 3, 4, 6], [0, 2, 3, 5, 6], [0, 2, 4, 5, 6], 
+                [0, 3, 4, 5, 6], [1, 2, 3, 4, 5], [1, 2, 3, 4, 6], [1, 2, 3, 5, 6], [1, 2, 4, 5, 6], [1, 3, 4, 5, 6], [2, 3, 4, 5, 6], 
+                [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 6], [0, 1, 2, 3, 5, 6], [0, 1, 2, 4, 5, 6], [0, 1, 3, 4, 5, 6], [0, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]
             ]
         elif selected_feature_set == 'sci++':
             notes = ['SCI++']
