@@ -218,7 +218,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
         return None
     else:
         g0 = '/'.join([pgt_root, dataset_names[p], \
-            config['intermediate']['pgt']['pgt_g0_%s' % feature].format(modes[k])])
+            config['intermediate']['pgt']['pgt_g0_%s' % feature].format(modes[k], t, d)])
         if is_file_exists(g0) is False:
             if feature == 'personal':
                 ### columns=['user', 'location', 'p_i']
