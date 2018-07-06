@@ -156,7 +156,7 @@ def visualize_data(df):
   temp = df[0:test_limit]  ### For testing purpose --> to speed-up and understand the data
   gmplot(temp)
 
-@fn_timer
+# @fn_timer
 def extract_checkins(dataset_name, mode, config, id, filter):
   debug('Processing %s [%s] for each %s [filter=%s]' % (dataset_name, mode, id, filter))
   dataset_root = config['directory']['dataset']
@@ -227,7 +227,7 @@ def df_uid(df, uid, config, force_id=None):
     id = force_id
   return df.loc[df[id] == uid]
 
-@fn_timer
+# @fn_timer
 def read_colocation_file(config, p, k, t, d, chunksize=None, usecols=None):
     ### Read co-location from file
     is_read_compressed = config['kwargs']['read_compressed']
@@ -320,6 +320,50 @@ def sort_colocation(config):
           colocation_df.to_csv(colocation_fullname, index=False, header=True, compression=compression)
           debug('Finished sorting %s' % colocation_fullname)
 
+def generate_walk2friend(config):
+  kwargs = config['kwargs']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  for dataset_name in datasets:
+    p = config['dataset'].index(dataset_name)
+    for mode in modes:
+      k = config['mode'].index(mode)
+      for t in t_diffs:
+        for d in s_diffs:
+          output_dir = config['directory']['walk2friend']
+          make_sure_path_exists(output_dir)
+          debug('p', p, 'k', k, 't', t, 'd', d)
+          checkin_name = '/'.join([output_dir, '{}_{}_t{}_d{}.checkin'.format(dataset_name, mode, t, d)])
+          friends_name = '/'.join([output_dir, '{}_{}_t{}_d{}.friends'.format(dataset_name, mode, t, d)])
+          if is_file_exists(checkin_name) is False or is_file_exists(friends_name) is False:
+            checkins, _ = extract_checkins_all(dataset_name, mode, config)
+            friends = extract_friendships(dataset_name, config)
+            user_unique = []
+            for colocations in read_colocation_chunk(config, p, k, t, d, usecols=['user1', 'user2']):
+              user_unique.append(colocations['user1'].unique())
+              user_unique.append(colocations['user2'].unique())
+            # user_unique = np.array(user_unique)
+            user_unique = np.ravel(user_unique)
+            debug(user_unique)
+            user_unique = np.unique(user_unique)
+            debug('Before', '#checkins', len(checkins), '#friends', len(friends))
+            checkins = checkins.loc[(checkins['user'].isin(user_unique))]
+            friends = friends.loc[(friends['user1'].isin(user_unique)) & (friends['user2'].isin(user_unique))]
+            debug('After', '#checkins', len(checkins), '#friends', len(friends))
+            checkins.sort_values(['user', 'location'], inplace=True)
+            checkins.rename(columns={"user": "uid", "location":"locid"}, inplace=True)
+            checkins['mid'] = range(len(checkins))
+            checkins = checkins[['mid', 'uid', 'locid']]
+            checkins.to_csv(checkin_name, index=False, header=True)
+            friends.rename(columns={"user1":"u1", "user2":"u2"}, inplace=True)
+            friends.sort_values(['u1', 'u2'], inplace=True)
+            friends = friends[['u1', 'u2']]
+            friends.to_csv(friends_name, index=False, header=True)
+            del user_unique
+      gc.collect()
+
 @fn_timer
 def main():
   ### Read config
@@ -337,6 +381,9 @@ def main():
   ### Sorting co-location based on several criteria
   if kwargs['preprocessing']['sort_colocation'] is True:
     sort_colocation(config)
+  ### Generating check-ins based on co-locations -- for walk2friend evaluation
+  if kwargs['preprocessing']['walk2friend'] is True:
+    generate_walk2friend(config)
 
 if __name__ == '__main__':
   main()
