@@ -3,6 +3,7 @@ import sys
 import os
 import numpy as np
 import pandas as pd
+import gc
 ### Setup Directories for local library
 PWD = os.getcwd()
 sys.path.append(PWD)
@@ -28,7 +29,6 @@ def test_checkin_stats():
   ### Read config
   config = read_config('config_test.json')
   kwargs = config['kwargs']
-  run_by = kwargs['colocation']['run_by']
   all_datasets = config['dataset']
   all_modes = config['mode']
   n_core = kwargs['n_core']
@@ -40,19 +40,39 @@ def test_checkin_stats():
       k = all_modes.index(mode)
       debug('Run Test on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
       ### Test extract check-ins
-      checkins, grouped = extract_checkins(config, dataset_name, mode, run_by)
+      checkins, _ = extract_checkins_all(dataset_name, mode, config)
+      checkins['u_count'] = checkins.groupby('user')['user'].transform('count')
+      df, _ = extract_checkins_all(dataset_name, mode, config, filter=False)
+      df['u_count'] = df.groupby('user')['user'].transform('count')
+      df = df[(df['u_count'] > 1)]
+      n_user_ori = len(df['user'].unique())
+      n_checkins_ori = len(df)
+      n_checkins_filter = len(checkins)
       ### Test extract friendships
       friend_df = extract_friendships(dataset_name, config)
-      debug('#friend', len(friend_df))
+      n_friend = len(friend_df)      
       uids = checkins['user'].unique()
-      debug('#user', len(uids))
+      n_user_filter = len(uids)      
       locs = checkins['location'].unique()
-      debug('#location', len(locs))
-      pd.set_option('display.max_columns', 10)
-      debug(grouped.describe())
+      n_locs = len(locs)
       friend_match_checkin = friend_df.isin(uids)
       friend_df = friend_df[friend_match_checkin['user1'] & friend_match_checkin['user2']]
-      debug('#friend w/ checkins', len(friend_df))
+      friend_ids = np.unique(np.concatenate((friend_df['user1'].values, friend_df['user2'].values)))
+      checkins = df.loc[df['user'].isin(friend_ids)]
+      n_user_friend = len(checkins['user'].unique())
+      n_checkins_friend = len(checkins)
+      avg_checkin_ori = n_checkins_ori/n_user_ori
+      avg_checkin_filter = n_checkins_filter/n_user_filter
+      avg_checkin_friend = n_checkins_friend/n_user_friend
+      # debug('#user ori', n_user_ori)
+      # debug('#friend', n_friend)
+      # debug('#user', n_user_filter)
+      # debug('#location', n_locs)
+      # debug('#friend w/ checkins', n_friend)
+      # debug('Avg. #Checkins ori', avg_checkin_ori)
+      # debug('Avg. #Checkins filtered', avg_checkin_filter)
+      # debug('#user (#friend>1)', n_user_friend)
+      debug(n_user_ori, n_user_friend, n_user_filter, n_checkins_ori, n_checkins_friend, n_checkins_filter, n_friend, n_locs, avg_checkin_ori, avg_checkin_friend, avg_checkin_filter)
   debug('Finished Test on SCI+')
 
 def test_colocation_stats():
@@ -75,10 +95,21 @@ def test_colocation_stats():
       k = all_modes.index(mode)
       for t in t_diffs:
         for d in s_diffs:
-          colocation_df = read_colocation_file(config, p, k, t, d)
-          colocation_df = determine_social_tie(colocation_df, friend_df)
-          colocation_df = colocation_df[['user1', 'user2', 'link']].drop_duplicates(['user1', 'user2'])
-          debug('#colocations', len(colocation_df), sum(colocation_df['link']), 'p', p, 'k', k, 't', t, 'd', d)
+          total_user = 0
+          total_friend = 0
+          total_colocation = 0
+          i = 0
+          for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=10 ** 6, usecols=['user1', 'user2']):
+            colocation_df = determine_social_tie(colocation_df, friend_df)
+            total_colocation += len(colocation_df)
+            colocation_df = colocation_df.drop_duplicates(['user1', 'user2'])
+            total_user += len(colocation_df)
+            total_friend += sum(colocation_df['link'])
+            i += 1
+            # debug('Processing chunks #%d' % i)
+          # debug('#colocations', total_colocation, '#total_user', total_user, '#total_friend', total_friend, 'p', p, 'k', k, 't', t, 'd', d)
+          debug(total_colocation, total_user, total_friend, p, k, t, d)
+          gc.collect()
   debug('Finished Test on SCI+')
 
 if __name__ == '__main__':
