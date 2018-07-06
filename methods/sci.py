@@ -275,7 +275,6 @@ def extract_colocation_features(stat_lp, config, p, k, t, d):
     if is_file_exists(sci_name):
         debug('File %s exists' % sci_name)
     else:
-        dataset_names = config['dataset']
         ### Read (original) friendship from file
         friend_df = extract_friendships(dataset_names[p], config)
         colocation_df = read_colocation_file(config, p, k, t, d)
