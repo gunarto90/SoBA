@@ -311,6 +311,8 @@ def personal_factor(config, p, k, t, d):
         g2.sort_values(['user1', 'user2'], inplace=True)
         g1['g1'] = g1['mean'] * g1['count']
         g2['g2'] = g2['max'] * g2['count']
+        g1['g1'] = g1['g1']/max(g1['g1'])
+        g2['g2'] = g2['g2']/max(g2['g2'])
         g1.to_csv(g1_file, header=True, index=False, compression='bz2')
         g2.to_csv(g2_file, header=True, index=False, compression='bz2')
         # debug(g1.head())
@@ -319,6 +321,10 @@ def personal_factor(config, p, k, t, d):
     else:
         g1 = pd.read_csv(g1_file)
         g2 = pd.read_csv(g2_file)
+        g1['g1'] = g1['g1']/max(g1['g1'])
+        g2['g2'] = g2['g2']/max(g2['g2'])
+        g1.to_csv(g1_file, header=True, index=False, compression='bz2')
+        g2.to_csv(g2_file, header=True, index=False, compression='bz2')
     return g1, g2
 
 def global_factor(config, p, k, t, d, g2):
@@ -338,11 +344,13 @@ def global_factor(config, p, k, t, d, g2):
         g3.reset_index(inplace=True)
         g3.sort_values(['user1', 'user2'], inplace=True)
         g3['g3'] = g2['g2'] * g3['sum']
+        g3['g3'] = g3['g3']/max(g3['g3'])
         g3.to_csv(g3_file, header=True, index=False, compression='bz2')
-        # debug(g3.head())
         del colocation_df
     else:
         g3 = pd.read_csv(g3_file)
+        g3['g3'] = g3['g3']/max(g3['g3'])
+        g3.to_csv(g3_file, header=True, index=False, compression='bz2')
     return g3
 
 def lambda_temporal(group):
@@ -355,7 +363,6 @@ def lambda_temporal(group):
 
 def temporal_factor(config, p, k, t, d, g2):
     g4 = None
-    n_core = config['kwargs']['n_core']
      ### Intermediate file -- check if exists
     pgt_root = config['directory']['pgt']
     dataset_names = config['dataset']
@@ -378,6 +385,7 @@ def temporal_factor(config, p, k, t, d, g2):
         g4.sort_values(['user1', 'user2'], inplace=True)
         g4['g4'] = g2['g2'] * g4['sum']
         g4[g4 < 0] = 0.0  ### Prevent negatives in values
+        g4['g4'] = g4['g4']/max(g4['g4'])
         g4.to_csv(g4_file, header=True, index=False, compression='bz2')
         del colocation_df, groups
     else:
@@ -399,17 +407,14 @@ def extract_pgt(config, p, k, t, d):
     if is_file_exists(intermediate_file) is False:
         ### Extracting each feature
         g1, g2 = personal_factor(config, p, k, t, d)        ### P in PGT
-        g1['g1'] = g1['g1']/max(g1['g1'])
-        g2['g2'] = g2['g2']/max(g2['g2'])
         debug('Finished loading personal factor', 'p', p, 'k', k, 't', t, 'd', d)
         g3 = global_factor(config, p, k, t, d, g2)          ### PG in PGT
-        g3['g3'] = g3['g3']/max(g3['g3'])
         debug('Finished loading global factor', 'p', p, 'k', k, 't', t, 'd', d)
         g4 = temporal_factor(config, p, k, t, d, g2)        ### PGT in PGT
-        g4['g4'] = g4['g4']/max(g4['g4'])
         debug('Finished loading temporal factor', 'p', p, 'k', k, 't', t, 'd', d)
         ### Merging all together
-        df = g2[['user1', 'user2', 'g2']].merge(g3[['user1', 'user2', 'g3']], on=['user1', 'user2'])
+        df = g1[['user1', 'user2', 'g1']].merge(g2[['user1', 'user2', 'g2']], on=['user1', 'user2'])
+        df = df.merge(g3[['user1', 'user2', 'g3']], on=['user1', 'user2'])
         df = df.merge(g4[['user1', 'user2', 'g4']], on=['user1', 'user2'])
         friend_df = extract_friendships(dataset_names[p], config)
         df = determine_social_tie(df, friend_df)
