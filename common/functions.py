@@ -10,6 +10,7 @@ from functools import wraps
 from math import radians, cos, sin, asin, sqrt, pow, exp, log
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 IS_DEBUG = True
 LOG_PATH = 'log'
@@ -245,3 +246,9 @@ def merge_dicts(*dict_args):
     for dictionary in dict_args:
         result.update(dictionary)
     return result
+
+def applyParallel(config, dfGrouped, func):
+  n_core = config['kwargs']['n_core']
+  debug('Applying parallelization for aggregating {} [{} rows]'.format(func.__name__, len(dfGrouped)))
+  retLst = Parallel(n_jobs=n_core)(delayed(func)(group) for name, group in dfGrouped)
+  return pd.concat(retLst)
