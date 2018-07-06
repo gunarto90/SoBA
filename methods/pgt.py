@@ -13,7 +13,7 @@ PWD = os.getcwd()
 sys.path.append(PWD)
 ### Local libraries
 from common.functions import read_config, debug, make_sure_path_exists, is_file_exists, haversine_np, \
-    merge_dicts, init_begin_end, remove_file_if_exists, entropy_np
+    merge_dicts, init_begin_end, remove_file_if_exists, entropy_np, applyParallel
 from preprocessings.read import extract_friendships, read_colocation_file, determine_social_tie, \
     extract_checkins_per_user, extract_checkins_per_venue, df_uid, read_colocation_chunk
 
@@ -64,6 +64,14 @@ def calculate_global(row, entropy):
         return (pi+pj)/2    ### Average of two entropy location
     else:
         return pi + pj ### Because at least one of them is 0.0
+
+def calculate_temporal(arr):
+    if len(arr) == 1:
+        return 1.0
+    df = arr.diff().fillna(0)
+    diff = df[df!=0].values
+    lt = 1.0 - np.exp(-ct * np.absolute(diff))
+    return lt
 
 def extract_pi_loc_k(checkins, grouped, venues, user_visit, config, p, k, start, finish, feature):
     pgt_part_root = config['directory']['pgt_temp']
@@ -232,7 +240,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
             ### Evaluate the weight for each colocation
             ### Map step
             i = 0
-            for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=10 ** 3, usecols=['user1', 'user2', 'location1', 'location2']):
+            for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=10 ** 5, usecols=['user1', 'user2', 'location1', 'location2']):
                 g0_part = '/'.join([pgt_part_root, dataset_names[p], \
                     config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], t, d, i)])
                 debug(g0_part)
@@ -244,7 +252,7 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
                     colocation_df.to_csv(g0_part, index=False, header=True, compression='bz2')
                 i += 1
             ### Reduce step
-            colocation_df = pd.DataFrame(columns=['user1', 'user2', 'location1', 'location2', 'wp'])
+            colocation_df = pd.DataFrame(columns=['user1', 'user2', 'location1', 'location2', col_name])
             condition = True
             i = 0
             while(condition is True):
@@ -276,7 +284,6 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
             colocation_df = pd.read_csv(g0)
             debug('Loaded g0 %s successfully [%s]' % (feature, g0))
         return colocation_df
-
 
 def personal_factor(config, p, k, t, d):
     g1 = None
@@ -338,9 +345,58 @@ def global_factor(config, p, k, t, d, g2):
         g3 = pd.read_csv(g3_file)
     return g3
 
-def temporal_factor(config, p, k, t, d):
-    pass
+def lambda_temporal(group):
+    df = group[['user1', 'user2']]
+    t_diff = group['time'].diff().fillna(0).values
+    lt = 1-np.exp(-ct * t_diff)
+    g4 = group['wg'] * lt
+    df['g4'] = g4.values
+    return df
+
+def temporal_factor(config, p, k, t, d, g2):
+    g4 = None
+    n_core = config['kwargs']['n_core']
+     ### Intermediate file -- check if exists
+    pgt_root = config['directory']['pgt']
+    dataset_names = config['dataset']
+    modes = config['mode']
+    pgt_root = config['directory']['pgt']
+    make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
+    g4_file = '/'.join([pgt_root, dataset_names[p], \
+        config['intermediate']['pgt']['pgt_g4'].format(modes[k], t, d)])
+    if is_file_exists(g4_file) is False:
+        global_df = transform_colocation_pgt(config, p, k, t, d, 'global')
+        colocation_df = read_colocation_file(config, p, k, t, d, \
+            usecols=['user1', 'user2', 'time1', 'time2'])
+        colocation_df['wg'] = global_df['wg'].values
+        colocation_df['time'] = (colocation_df['time1'] + colocation_df['time2'])/2
+        colocation_df.drop(columns=['time1', 'time2'], inplace=True)
+        groups = colocation_df.groupby(['user1', 'user2'])
+        g4 = applyParallel(config, groups, lambda_temporal)
+        #result = Parallel(n_jobs=n_core)(delayed(lambda_temporal)(group) for _, group in dfGrouped)
+        # for _, group in groups:
+        #     t_diff = group['time'].diff().fillna(0).values
+        #     lt = 1-np.exp(-ct * t_diff)
+        #     group['g4'] = group['wg'] * lt
+        #     g4.append(group, ignore_index=True)
+        debug(g4.describe())
+        debug(g4.head(10))
+        g4.to_csv(g4_file, header=True, index=False, compression='bz2')
+        del colocation_df, groups
+    else:
+        g4 = pd.read_csv(g4_file)
+    return g4
 
 def extract_pgt(config, p, k, t, d):
-    g1, g2 = personal_factor(config, p, k, t, d)
-    g3 = global_factor(config, p, k, t, d, g2)
+    dataset_names = config['dataset']
+    ### Extracting each feature
+    g1, g2 = personal_factor(config, p, k, t, d)        ### P in PGT
+    debug('Finished loading personal factor', 'p', p, 'k', k, 't', t, 'd', d)
+    g3 = global_factor(config, p, k, t, d, g2)          ### PG in PGT
+    debug('Finished loading global factor', 'p', p, 'k', k, 't', t, 'd', d)
+    g4 = temporal_factor(config, p, k, t, d, g2)    ### PGT in PGT
+    debug('Finished loading temporal factor', 'p', p, 'k', k, 't', t, 'd', d)
+    ### Merging all together
+    df = g2[['user1', 'user2', 'g2']].merge(g3[['user1', 'user2', 'g3']], on=['user1', 'user2'])
+    friend_df = extract_friendships(dataset_names[p], config)
+    df = determine_social_tie(df, friend_df)
