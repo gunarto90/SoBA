@@ -413,5 +413,4 @@ def extract_pgt(config, p, k, t, d):
         df = df.merge(g4[['user1', 'user2', 'g4']], on=['user1', 'user2'])
         friend_df = extract_friendships(dataset_names[p], config)
         df = determine_social_tie(df, friend_df)
-        df.to_csv('/'.join([pgt_root, dataset_names[p], intermediate_file]), \
-            header=True, index=False, compression=compression)
+        df.to_csv(intermediate_file, header=True, index=False, compression=compression)
