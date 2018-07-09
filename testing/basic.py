@@ -24,10 +24,11 @@ def extract_checkins(config, dataset_name, mode, run_by):
 
 ### Testing reading the dataset and its statistics
 def test_checkin_stats():
+  config_name = 'config_test.json'
   ### Started the program
-  debug('Started Test test_checkin_stats on SCI+')
+  debug('Started Test test_checkin_stats on SCI+', config_name)
   ### Read config
-  config = read_config('config_test.json')
+  config = read_config(config_name)
   kwargs = config['kwargs']
   all_datasets = config['dataset']
   all_modes = config['mode']
@@ -76,8 +77,9 @@ def test_checkin_stats():
   debug('Finished Test on SCI+')
 
 def test_colocation_stats():
+  config_name = 'config_test.json'
   ### Started the program
-  debug('Started Test test_checkin_stats on SCI+')
+  debug('Started Test test_checkin_stats on SCI+', config_name)
   config = read_config('config_test.json')
   ### Read config
   config = read_config('config_test.json')
@@ -112,7 +114,40 @@ def test_colocation_stats():
           gc.collect()
   debug('Finished Test on SCI+')
 
+def generating_walk2friend_data():
+  config_name = 'config_test.json'
+  debug('Started Test test_checkin_stats on SCI+', config_name)
+  config = read_config(config_name)
+  ### Started the program
+  ### Read config
+  config = read_config(config_name)
+  kwargs = config['kwargs']
+  all_datasets = config['dataset']
+  all_modes = config['mode']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  directory = config['directory']['intermediate']
+  for dataset_name in datasets:
+    p = all_datasets.index(dataset_name)
+    for mode in modes:
+      k = all_modes.index(mode)
+      debug('Run Test on Dataset', dataset_name, p, 'Mode', mode, k)
+      ### Test extract check-ins
+      checkins, _ = extract_checkins_all(dataset_name, mode, config)
+      checkins.sort_values(["user", "timestamp"], inplace=True)
+      checkins['mid'] = range(1, len(checkins)+1)
+      checkins.rename(columns={"user": "uid", "location": "locid"}, inplace=True)
+      checkins = checkins[['mid', 'uid', 'locid']]
+      checkins.to_csv('/'.join([directory, '%s_%s_10.checkin' % (dataset_name, mode)]))
+      ### Test extract friendships
+      friend_df = extract_friendships(dataset_name, config)
+      friend_df.sort_values(["user1", "user2"], inplace=True)
+      friend_df.sort_values(["user1", "user2"], inplace=True)
+      friend_df.rename(columns={"user1": "u1", "user2": "u2"}, inplace=True)
+      friend_df.to_csv('/'.join([directory, '%s_%s_10.friends' % (dataset_name, mode)]))
+
 if __name__ == '__main__':
   pass
   # test_checkin_stats()
-  test_colocation_stats()
+  # test_colocation_stats()
+  generating_walk2friend_data()
