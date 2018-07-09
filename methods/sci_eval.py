@@ -66,7 +66,8 @@ def sci_evaluation(config, p, k, t, d):
         ### Only All features
         elif selected_feature_set == 'summary':
             notes = ['SCI+']
-            assign = [ [0,1,2,4,6] ]
+            assign = [ [0,1,2,3,4] ]
+        ### Added Popularity, 
         elif selected_feature_set == 'sci_plus_all':
             notes = ['All',
                 'F', 'D', 'TD', 'TSD', 'P', 'TSA', 'TS', 
@@ -110,16 +111,10 @@ def sci_evaluation(config, p, k, t, d):
                 [0, 3, 4, 5, 6], [1, 2, 3, 4, 5], [1, 2, 3, 4, 6], [1, 2, 3, 5, 6], [1, 2, 4, 5, 6], [1, 3, 4, 5, 6], [2, 3, 4, 5, 6], 
                 [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 6], [0, 1, 2, 3, 5, 6], [0, 1, 2, 4, 5, 6], [0, 1, 3, 4, 5, 6], [0, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]
             ]
-        elif selected_feature_set == 'sci++':
-            notes = ['SCI++']
-            assign = [ [0,1,2,3,4,6] ]
-        elif selected_feature_set == 'test':
-            notes = ['F+D+TD+P', 'SCI++', 'SCI+', 'SCI', 'All']
-            assign = [ [0, 1, 2, 4], [0,1,2,3,4,6], [0,1,2,4,6], [0,1,2,6], [0,1,2,3,4,5,6] ]
         ### SCI and SCI+
         else:   ### 'summary_old_new'
             notes = ['SCI+', 'SCI']
-            assign = [ [0,1,2,4,6], [0,1,2,6] ]
+            assign = [ [0,1,2,3,4], [0,1,2,6] ]
         ### Generate the report
         debug(notes, assign)
         texts = generate_report(config, X, y, assign, notes, p, k, t, d)
