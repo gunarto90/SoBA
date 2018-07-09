@@ -11,7 +11,7 @@ from preprocessings.read import extract_checkins_per_user, extract_checkins_per_
 from methods.colocation import process_map, process_reduce, prepare_colocation, \
   generate_colocation_single
 from methods.sci import extract_popularity, extract_colocation_features
-from methods.sci_eval import sci_evaluation
+from methods.evaluation import sci_evaluation, pgt_evaluation
 from methods.pgt import extract_personal_pgt, extract_global_pgt, extract_pgt
 
 @fn_timer
@@ -157,6 +157,32 @@ def run_pgt(config):
           extract_pgt(config, p, k, t_diff, s_diff)
           gc.collect()
 
+def run_pgt_evaluation(config):
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  all_datasets = config['dataset']
+  all_modes = config['mode']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  report_directory = config['directory']['report']
+  make_sure_path_exists(report_directory)
+  for dataset_name in datasets:
+    p = all_datasets.index(dataset_name)
+    for mode in modes:
+      k = all_modes.index(mode)
+      debug('Run PGT Evaluation on Dataset', dataset_name, p, 'Mode', mode, k, '#Core', n_core)
+      ### Creating the report file
+      result_filename = '/'.join([report_directory, 'PGT_result_p{}_k{}.csv'.format(p,k)])
+      remove_file_if_exists(result_filename)
+      with open(result_filename, 'ab') as fw:
+          fw.write('p,k,t,d,auc,precision,recall,f1,#friends,#data,feature_set,preprocessing\n')
+      for t_diff in t_diffs:
+        for s_diff in s_diffs:
+          pgt_evaluation(config, p, k, t_diff, s_diff)
+          gc.collect()
+
 def main(config_name='config.json'):
   ### Started the program
   debug('Started SCI+', config_name)
@@ -181,6 +207,10 @@ def main(config_name='config.json'):
   is_run = kwargs['pgt']['run']
   if is_run is not None and is_run is True:
     run_pgt(config)
+  ### PGT Evaluation
+  is_run = kwargs['pgt_eval']['run']
+  if is_run is not None and is_run is True:
+    run_pgt_evaluation(config)
   ### Finished the program
   debug('Finished SCI+')
 
