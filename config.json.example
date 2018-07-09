@@ -29,7 +29,7 @@
       "sampling":["original"],
       "kfold":5,
       "features_options":[
-        "pakdd_2017_all", "pakdd_2017_summary", "all_features", "summary", "summary_old_new", "sci_plus_all", "sci++"
+        "pakdd_2017_all", "pakdd_2017_summary", "all_features", "summary", "summary_old_new", "sci_plus_all"
       ],
       "sampling_options":["original", "over", "under", "combo"]
     },
