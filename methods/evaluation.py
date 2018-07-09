@@ -21,6 +21,41 @@ sys.path.append(PWD)
 from common.functions import read_config, debug, fn_timer, \
     make_sure_path_exists, is_file_exists, remove_file_if_exists
 
+def pgt_evaluation(config, p, k, t, d):
+    debug('Evaluating PGT for p{}, k{}, t{}, d{}'.format(p, k, t, d))
+    dataset_names = config['dataset']
+    compressed = config['kwargs']['read_compressed']
+    pgt_root = config['directory']['pgt']
+    make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
+    if compressed is True:
+        pgt_name = config['intermediate']['pgt']['pgt_output_compressed']
+    else:
+        pgt_name = config['intermediate']['pgt']['pgt_output']
+    evaluation_name = '/'.join([pgt_root, dataset_names[p], pgt_name.format(p, k, t, d)])
+    if is_file_exists(evaluation_name) is True:
+        dataset = pd.read_csv(evaluation_name)
+        # Format: 'user1', 'user2', 'g1', 'g2', 'g3', 'g4', 'link'
+        X = dataset[['g1', 'g2', 'g3', 'g4']].values
+        y = dataset[['link']].values
+        selected_feature_set = config['kwargs']['pgt_eval']['features']
+        if selected_feature_set == 'all':
+            notes = ["PGT+", "PGT", "P0", "P", "PG"]
+            assign = [[0,1,2,3], [3], [0], [1], [2]]
+        else:   ### Summary only
+            notes = ["PGT+", "PGT"]
+            assign = [[0,1,2,3], [3]]
+        debug(notes, assign)
+        texts = generate_report(config, X, y, assign, notes, p, k, t, d)
+        del X, y
+        report_directory = config['directory']['report']
+        result_filename = '/'.join([report_directory, 'PGT_result_p{}_k{}.csv'.format(p,k)])
+        for text in texts:
+            if text is not None:
+                with open(result_filename, 'ab') as fw:
+                    fw.write(text+'\n')
+    else:
+        debug('File not found', evaluation_name)
+
 def sci_evaluation(config, p, k, t, d):
     debug('Evaluating SCI for p{}, k{}, t{}, d{}'.format(p, k, t, d))
     dataset_names = config['dataset']

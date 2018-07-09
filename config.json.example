@@ -49,7 +49,14 @@
         "clean_temp":true
       }
     },
-    "pgt_eval":false,
+    "pgt_eval":{
+      "run":false,
+      "features":"all",
+      "sampling":["original"],
+      "kfold":5,
+      "features_options":["all", "summary"],
+      "sampling_options":["original", "over", "under", "combo"]
+    }
 
     "partial_colocation":{
       "p":[2],
