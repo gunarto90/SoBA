@@ -37,6 +37,11 @@ def pgt_evaluation(config, p, k, t, d):
         # Format: 'user1', 'user2', 'g1', 'g2', 'g3', 'g4', 'link'
         X = dataset[['g1', 'g2', 'g3', 'g4']].values
         y = dataset[['link']].values
+        ### Normalize unexpected values
+        X[np.isinf(X)] = 0
+        X[np.isnan(X)] = 0
+        y[np.isinf(y)] = 0
+        y[np.isnan(y)] = 0
         selected_feature_set = config['kwargs']['pgt_eval']['features']
         if selected_feature_set == 'all':
             notes = ["PGT+", "PGT", "P0", "P", "PG"]
