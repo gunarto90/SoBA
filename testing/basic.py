@@ -138,13 +138,13 @@ def generating_walk2friend_data():
       checkins['mid'] = range(1, len(checkins)+1)
       checkins.rename(columns={"user": "uid", "location": "locid"}, inplace=True)
       checkins = checkins[['mid', 'uid', 'locid']]
-      checkins.to_csv('/'.join([directory, '%s_%s_10.checkin' % (dataset_name, mode)]))
+      checkins.to_csv('/'.join([directory, '%s_%s_10.checkin' % (dataset_name, mode)]), index=False, header=True)
       ### Test extract friendships
       friend_df = extract_friendships(dataset_name, config)
       friend_df.sort_values(["user1", "user2"], inplace=True)
       friend_df.sort_values(["user1", "user2"], inplace=True)
       friend_df.rename(columns={"user1": "u1", "user2": "u2"}, inplace=True)
-      friend_df.to_csv('/'.join([directory, '%s_%s_10.friends' % (dataset_name, mode)]))
+      friend_df.to_csv('/'.join([directory, '%s_%s_10.friends' % (dataset_name, mode)]), index=False, header=True)
 
 if __name__ == '__main__':
   pass
