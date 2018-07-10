@@ -56,7 +56,7 @@
       "kfold":5,
       "features_options":["all", "summary"],
       "sampling_options":["original", "over", "under", "combo"]
-    }
+    },
 
     "partial_colocation":{
       "p":[2],
