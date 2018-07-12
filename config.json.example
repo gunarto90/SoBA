@@ -17,7 +17,11 @@
       "run_by":"checkin",
       "order":"ascending",
       "early_stop":0,
-      "clear_dir":false
+      "clear_dir":false,
+      "sampling":{
+        "use_sampling":false,
+        "rate":0.2 
+      }
     },
 
     "sci":{
@@ -47,6 +51,13 @@
         "start":0,
         "finish":-1,
         "clean_temp":true
+      },
+      "extract_pgt":{
+        "run":false,
+        "personal":false,
+        "global":false,
+        "temporal":false,
+        "merge":false
       }
     },
     "pgt_eval":{
@@ -73,7 +84,12 @@
       "extract_friendships":false,
       "ids": ["user", "location", "checkin"],
       "user_visit":false,
-      "sort_colocation":false
+      "sort_colocation":false,
+      "walk2friend":false,
+      "sampling":{
+        "run":false,
+        "rate":0.2
+      }
     }
   },
 
@@ -100,7 +116,8 @@
     "sci":"intermediate/sci",
     "pgt":"intermediate/pgt",
     "pgt_temp":"intermediate/pgt/temp",
-    "report":"reports"
+    "report":"reports",
+    "walk2friend":"intermediate/walk2friend"
   },
   "intermediate": {
     "colocation":{
@@ -108,7 +125,9 @@
       "compressed":"co_raw_p{}_k{}_t{}_d{}.csv.bz2",
       "part":"co_raw_p{}_k{}_t{}_d{}_s{}_f{}.csv",
       "re":"(co_raw_)(p{}_)(k{}_)(t{}_)(d{}_)(s\\d*_)(f(-)?\\d*).csv",
-      "kdtree":"kd_tree_p{}_k{}.pickle.bz2"
+      "kdtree":"kd_tree_p{}_k{}.pickle.bz2",
+      "sample_csv":"co_raw_p{}_k{}_t{}_d{}_sample{}.csv",
+      "sample_compressed":"co_raw_p{}_k{}_t{}_d{}_sample{}.csv.bz2"
     },
     "sci":{
       "popularity":"sci_popularity_{}.pickle",

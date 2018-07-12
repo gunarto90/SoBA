@@ -7,6 +7,7 @@ import os
 import pickle
 import time
 import gc
+import math
 from joblib import Parallel, delayed
 ### Setup Directories for local library
 PWD = os.getcwd()
@@ -15,7 +16,7 @@ sys.path.append(PWD)
 from common.functions import read_config, debug, make_sure_path_exists, is_file_exists, haversine_np, \
     merge_dicts, init_begin_end, remove_file_if_exists, entropy_np, applyParallel
 from preprocessings.read import extract_friendships, read_colocation_file, determine_social_tie, \
-    extract_checkins_per_user, extract_checkins_per_venue, df_uid, read_colocation_chunk
+    extract_checkins_per_user, extract_checkins_per_venue, df_uid
 
 ### parameters
 cd = 1.5    ### distance parameter in personal density function [1,3]
@@ -26,7 +27,7 @@ def calculate_density(row, cd, user, venues):
     lats = np.full(len(user), temp['latitude'])
     lons = np.full(len(user), temp['longitude'])
     temp = haversine_np(lons, lats, user['longitude'], user['latitude'])
-    return sum(np.exp(-cd * temp)/len(user))
+    return sum(math.exp(-cd * temp)/len(user))
 
 def calculate_entropy(arr):
     if sum(arr) > 0:
@@ -47,7 +48,7 @@ def calculate_personal(row, density):
         pj = density_j['p_i'].values[0]
     if pi == 0.0 or pj == 0.0:
         return 0.0
-    return -np.log(pi*pj)
+    return -math.log(pi*pj)
 
 def calculate_global(row, entropy):
     entropy_i = entropy.loc[(entropy.location) == row['location1']]
@@ -64,14 +65,6 @@ def calculate_global(row, entropy):
         return (pi+pj)/2    ### Average of two entropy location
     else:
         return pi + pj ### Because at least one of them is 0.0
-
-def calculate_temporal(arr):
-    if len(arr) == 1:
-        return 1.0
-    df = arr.diff().fillna(0)
-    diff = df[df!=0].values
-    lt = 1.0 - np.exp(-ct * np.absolute(diff))
-    return lt
 
 def extract_pi_loc_k(checkins, grouped, venues, user_visit, config, p, k, start, finish, feature):
     pgt_part_root = config['directory']['pgt_temp']
@@ -240,10 +233,12 @@ def transform_colocation_pgt(config, p, k, t, d, feature):
             ### Evaluate the weight for each colocation
             ### Map step
             i = 0
-            for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=10 ** 5, usecols=['user1', 'user2', 'location1', 'location2']):
+            chunksize=10 ** 5
+            debug('chunksize for transform_colocation_pgt', chunksize)
+            for colocation_df in read_colocation_file(config, p, k, t, d, chunksize=chunksize, usecols=['user1', 'user2', 'location1', 'location2']):
                 g0_part = '/'.join([pgt_part_root, dataset_names[p], \
                     config['intermediate']['pgt']['pgt_g0_%s_part' % feature].format(modes[k], t, d, i)])
-                debug(g0_part)
+                debug('Processing', feature, 'part', g0_part)
                 if is_file_exists(g0_part) is False:
                     if feature == 'personal':
                         colocation_df[col_name] = colocation_df.apply(lambda x: calculate_personal(x, personal_density), axis=1)
@@ -298,7 +293,10 @@ def personal_factor(config, p, k, t, d):
         config['intermediate']['pgt']['pgt_g1'].format(modes[k], t, d)])
     g2_file = '/'.join([pgt_root, dataset_names[p], \
         config['intermediate']['pgt']['pgt_g2'].format(modes[k], t, d)])
-    if is_file_exists(g1_file) is False or is_file_exists(g2_file) is False:
+    if is_file_exists(g1_file) is True and is_file_exists(g2_file) is True:
+        g1 = pd.read_csv(g1_file)
+        g2 = pd.read_csv(g2_file)
+    else:
         ### If it does not exist
         feature = 'personal'
         colocation_df = transform_colocation_pgt(config, p, k, t, d, feature)
@@ -318,13 +316,6 @@ def personal_factor(config, p, k, t, d):
         # debug(g1.head())
         # debug(g2.head())
         del colocation_df
-    else:
-        g1 = pd.read_csv(g1_file)
-        g2 = pd.read_csv(g2_file)
-        g1['g1'] = g1['g1']/max(g1['g1'])
-        g2['g2'] = g2['g2']/max(g2['g2'])
-        g1.to_csv(g1_file, header=True, index=False, compression='bz2')
-        g2.to_csv(g2_file, header=True, index=False, compression='bz2')
     return g1, g2
 
 def global_factor(config, p, k, t, d, g2):
@@ -337,7 +328,9 @@ def global_factor(config, p, k, t, d, g2):
     make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
     g3_file = '/'.join([pgt_root, dataset_names[p], \
         config['intermediate']['pgt']['pgt_g3'].format(modes[k], t, d)])
-    if is_file_exists(g3_file) is False:
+    if is_file_exists(g3_file) is True:
+        g3 = pd.read_csv(g3_file)
+    else:
         feature = 'global'
         colocation_df = transform_colocation_pgt(config, p, k, t, d, feature)
         g3 = colocation_df.groupby(['user1', 'user2'])['wg'].agg(['sum'])
@@ -347,10 +340,6 @@ def global_factor(config, p, k, t, d, g2):
         g3['g3'] = g3['g3']/max(g3['g3'])
         g3.to_csv(g3_file, header=True, index=False, compression='bz2')
         del colocation_df
-    else:
-        g3 = pd.read_csv(g3_file)
-        g3['g3'] = g3['g3']/max(g3['g3'])
-        g3.to_csv(g3_file, header=True, index=False, compression='bz2')
     return g3
 
 def lambda_temporal(group):
@@ -371,7 +360,9 @@ def temporal_factor(config, p, k, t, d, g2):
     make_sure_path_exists('/'.join([pgt_root, dataset_names[p]]))
     g4_file = '/'.join([pgt_root, dataset_names[p], \
         config['intermediate']['pgt']['pgt_g4'].format(modes[k], t, d)])
-    if is_file_exists(g4_file) is False:
+    if is_file_exists(g4_file) is True:
+        g4 = pd.read_csv(g4_file)
+    else:
         global_df = transform_colocation_pgt(config, p, k, t, d, 'global')
         colocation_df = read_colocation_file(config, p, k, t, d, \
             usecols=['user1', 'user2', 'time1', 'time2'])
@@ -388,8 +379,6 @@ def temporal_factor(config, p, k, t, d, g2):
         g4['g4'] = g4['g4']/max(g4['g4'])
         g4.to_csv(g4_file, header=True, index=False, compression='bz2')
         del colocation_df, groups
-    else:
-        g4 = pd.read_csv(g4_file)
     return g4
 
 def extract_pgt(config, p, k, t, d):
@@ -406,16 +395,26 @@ def extract_pgt(config, p, k, t, d):
     intermediate_file = '/'.join([pgt_root, dataset_names[p], pgt_name.format(p, k, t, d)])
     if is_file_exists(intermediate_file) is False:
         ### Extracting each feature
-        g1, g2 = personal_factor(config, p, k, t, d)        ### P in PGT
-        debug('Finished loading personal factor', 'p', p, 'k', k, 't', t, 'd', d)
-        g3 = global_factor(config, p, k, t, d, g2)          ### PG in PGT
-        debug('Finished loading global factor', 'p', p, 'k', k, 't', t, 'd', d)
-        g4 = temporal_factor(config, p, k, t, d, g2)        ### PGT in PGT
-        debug('Finished loading temporal factor', 'p', p, 'k', k, 't', t, 'd', d)
-        ### Merging all together
-        df = g1[['user1', 'user2', 'g1']].merge(g2[['user1', 'user2', 'g2']], on=['user1', 'user2'])
-        df = df.merge(g3[['user1', 'user2', 'g3']], on=['user1', 'user2'])
-        df = df.merge(g4[['user1', 'user2', 'g4']], on=['user1', 'user2'])
-        friend_df = extract_friendships(dataset_names[p], config)
-        df = determine_social_tie(df, friend_df)
-        df.to_csv(intermediate_file, header=True, index=False, compression=compression)
+        if config['kwargs']['pgt']['extract_pgt']['run'] is True:
+            g1 = None
+            g2 = None
+            g3 = None
+            g4 = None
+            if config['kwargs']['pgt']['extract_pgt']['personal'] is True:
+                g1, g2 = personal_factor(config, p, k, t, d)        ### P in PGT
+                debug('Finished loading personal factor', 'p', p, 'k', k, 't', t, 'd', d)
+            if config['kwargs']['pgt']['extract_pgt']['global'] is True:
+                g3 = global_factor(config, p, k, t, d, g2)          ### PG in PGT
+                debug('Finished loading global factor', 'p', p, 'k', k, 't', t, 'd', d)
+            if config['kwargs']['pgt']['extract_pgt']['temporal'] is True:
+                g4 = temporal_factor(config, p, k, t, d, g2)        ### PGT in PGT
+                debug('Finished loading temporal factor', 'p', p, 'k', k, 't', t, 'd', d)
+            ### Merging all together
+            if config['kwargs']['pgt']['extract_pgt']['merge'] is True:
+                if g1 is not None and g2 is not None and g3 is not None and g4 is not None:
+                    df = g1[['user1', 'user2', 'g1']].merge(g2[['user1', 'user2', 'g2']], on=['user1', 'user2'])
+                    df = df.merge(g3[['user1', 'user2', 'g3']], on=['user1', 'user2'])
+                    df = df.merge(g4[['user1', 'user2', 'g4']], on=['user1', 'user2'])
+                    friend_df = extract_friendships(dataset_names[p], config)
+                    df = determine_social_tie(df, friend_df)
+                    df.to_csv(intermediate_file, header=True, index=False, compression=compression)

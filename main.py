@@ -152,10 +152,15 @@ def run_pgt(config):
         extract_personal_pgt(config, p, k)
       if kwargs['pgt']['global']['run']:
         extract_global_pgt(config, p, k)
-      for t_diff in t_diffs:
-        for s_diff in s_diffs:
-          extract_pgt(config, p, k, t_diff, s_diff)
-          gc.collect()
+      if config['kwargs']['pgt']['extract_pgt']['temporal'] is False:
+        Parallel(n_jobs=n_core)(delayed(extract_pgt)(config, p, k, t_diff, s_diff) \
+          for t_diff in t_diffs for s_diff in s_diffs)
+        gc.collect()
+      else:
+        for t_diff in t_diffs:
+          for s_diff in s_diffs:
+            extract_pgt(config, p, k, t_diff, s_diff)
+            gc.collect()
 
 def run_pgt_evaluation(config):
   kwargs = config['kwargs']

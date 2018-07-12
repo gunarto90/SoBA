@@ -10,6 +10,7 @@ import pickle
 import sys
 import os.path
 import gc
+from joblib import Parallel, delayed
 ### Setup Directories for local library
 PWD = os.getcwd()
 sys.path.append(PWD)
@@ -227,16 +228,37 @@ def df_uid(df, uid, config, force_id=None):
     id = force_id
   return df.loc[df[id] == uid]
 
-# @fn_timer
+"""
+Read colocation from file
+- config    : configuration file
+- p         : dataset (0: gowalla, 1: brightkite, 2: foursquare)
+- k         : mode for dataset (0: all, 1: weekday, 2: weekend)
+- t         : time threshold for co-location criterion (in seconds)
+- d         : spatial threshold for co-location criterion (in meters)
+- chunksize : if want to read the colocation file by using chunks (partial reading)
+- usecols   : determine which columns to use (array-like)
+"""
 def read_colocation_file(config, p, k, t, d, chunksize=None, usecols=None):
     ### Read co-location from file
-    is_read_compressed = config['kwargs']['read_compressed']
     colocation_root = config['directory']['colocation']
-    if is_read_compressed is False:
-        colocation_name = config['intermediate']['colocation']['csv']
-    else:
-        colocation_name = config['intermediate']['colocation']['compressed']
-    colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
+    colocation_fullname = None
+    is_read_compressed = config['kwargs']['read_compressed']
+    is_read_sampled = config['kwargs']['colocation']['sampling']['use_sampling']
+    if is_read_sampled is True:
+      sample_rate = config['kwargs']['colocation']['sampling']['rate']
+      if is_read_compressed is False:
+          colocation_name = config['intermediate']['colocation']['sample_csv']
+      else:
+          colocation_name = config['intermediate']['colocation']['sample_compressed']
+      colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d, sample_rate)])
+      if is_file_exists(colocation_fullname) is False:
+        colocation_fullname = None
+    if colocation_fullname is None:
+      if is_read_compressed is False:
+          colocation_name = config['intermediate']['colocation']['csv']
+      else:
+          colocation_name = config['intermediate']['colocation']['compressed']
+      colocation_fullname = '/'.join([colocation_root, colocation_name.format(p, k, t, d)])
     colocation_dtypes = {
         'user1':np.int_,'user2':np.int_,
         'location1':np.int_,'location2':np.int_,
@@ -244,15 +266,12 @@ def read_colocation_file(config, p, k, t, d, chunksize=None, usecols=None):
         'lat1':np.float_,'lon1':np.float_,'lat2':np.float_,'lon2':np.float_,
         't_diff':np.int_,'s_diff':np.float_
     }
+    debug('Read colocation file', colocation_fullname)
     if chunksize is None:
       colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, usecols=usecols)
     else:
       colocation_df = pd.read_csv(colocation_fullname, dtype=colocation_dtypes, chunksize=chunksize, usecols=usecols)
     return colocation_df
-
-def read_colocation_chunk(config, p, k, t, d, usecols=None):
-  chunksize = 10 ** 6
-  return read_colocation_file(config, p, k, t, d, chunksize, usecols)
 
 def determine_social_tie(colocation_df, friend_df):
     colocation_df = pd.merge(colocation_df, friend_df, on=['user1','user2'], how='left', indicator='link')
@@ -341,7 +360,7 @@ def generate_walk2friend(config):
             checkins, _ = extract_checkins_all(dataset_name, mode, config)
             friends = extract_friendships(dataset_name, config)
             user_unique = []
-            for colocations in read_colocation_chunk(config, p, k, t, d, usecols=['user1', 'user2']):
+            for colocations in read_colocation_file(config, p, k, t, d, chunksize=10**6, usecols=['user1', 'user2']):
               user_unique.append(colocations['user1'].unique())
               user_unique.append(colocations['user2'].unique())
             # user_unique = np.array(user_unique)
@@ -364,11 +383,52 @@ def generate_walk2friend(config):
             del user_unique
       gc.collect()
 
+def parallel_sampling(config, p, k, t, d):
+  debug('Start sampling', 'p', p, 'k', k, 't', t, 'd', d)
+  kwargs = config['kwargs']
+  is_read_compressed = kwargs['read_compressed']
+  colocation_root = config['directory']['colocation']
+  make_sure_path_exists(colocation_root)
+  if is_read_compressed is False:
+      sample_name = config['intermediate']['colocation']['sample_csv']
+      compression = None
+  else:
+      sample_name = config['intermediate']['colocation']['sample_compressed']
+      compression = 'bz2'
+  sample_rate = kwargs['preprocessing']['sampling']['rate']
+  sample_fullname = '/'.join([colocation_root, sample_name.format(p, k, t, d, sample_rate)])
+  df = read_colocation_file(config, p, k, t, d)
+  df = df.sample(frac=sample_rate, random_state=1)
+  df.to_csv(sample_fullname, header=True, index=False, compression=compression, mode='w')
+  debug('Finished sampling', 'p', p, 'k', k, 't', t, 'd', d, '#sample: ', len(df))
+
+def sampling_colocation(config):
+  kwargs = config['kwargs']
+  n_core = kwargs['n_core']
+  datasets = kwargs['active_dataset']
+  modes = kwargs['active_mode']
+  t_diffs = kwargs['ts']
+  s_diffs = kwargs['ds']
+  for dataset_name in datasets:
+    p = config['dataset'].index(dataset_name)
+    for mode in modes:
+      k = config['mode'].index(mode)
+      Parallel(n_jobs=n_core)(delayed(parallel_sampling)(config, p, k, t_diff, s_diff) \
+        for t_diff in t_diffs for s_diff in s_diffs)
+
 @fn_timer
 def main():
+  n_args = len(sys.argv)
+  config_name = 'config.json'
+  if n_args > 1:
+    config_name = sys.argv[1]
+  if is_file_exists(config_name) is False:
+    config_name = 'config.json'
   ### Read config
-  config = read_config()
+  config = read_config(config_name)
   kwargs = config['kwargs']
+
+  debug('Started Preprocessing', config_name)
 
   ### Read original data and generate standardized data
   if kwargs['preprocessing']['run_extraction'] is True:
@@ -384,6 +444,9 @@ def main():
   ### Generating check-ins based on co-locations -- for walk2friend evaluation
   if kwargs['preprocessing']['walk2friend'] is True:
     generate_walk2friend(config)
+  ### Generating sampled co-location (for testing purpose)
+  if kwargs['preprocessing']['sampling']['run'] is True:
+    sampling_colocation(config)
 
 if __name__ == '__main__':
   main()
